@@ -50,14 +50,15 @@ After `just new <name>`:
 just check
 ```
 
-This runs six gates in order, then prints the tool versions used:
+This prints the tool versions used, then runs six gates in order:
 
 1. `fmt`: `cargo fmt --all --check`.
 2. `lint`: the policy script `scripts/check-members.sh`, then clippy with
    `-D warnings`.
 3. `test`: `cargo nextest`, doc tests, and `scripts/test-new.sh` (which tests
    `just new`).
-4. `deny`: `cargo deny check`.
+4. `deny`: `cargo deny check`. It fetches the RustSec advisory database, so it
+   needs network access; on an offline machine this gate fails.
 5. `typos`: spell check.
 6. `license`: every `.rs` file under `apps/` and `libs/` must carry the
    licence header.

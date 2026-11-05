@@ -5,8 +5,11 @@ set windows-shell := ["bash", "-euo", "pipefail", "-c"]
 default:
     @just --list
 
-# Run all six gates, then print the tool versions used.
-check: fmt lint test deny typos license
+# Print the tool versions, then run all six gates.
+check: versions fmt lint test deny typos license
+
+# Print the tool versions (first, so a failing run still shows them).
+versions:
     @echo "--- tool versions ---"
     @cargo nextest --version | sed -n 1p
     @cargo deny --version | sed -n 1p
