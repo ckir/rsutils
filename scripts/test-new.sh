@@ -4,6 +4,15 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
+# Recover from an earlier run that was killed before its trap could run (SIGKILL
+# skips traps): drop leftover probe apps, then let cargo rewrite the lock file
+# without them. Other edits to Cargo.lock are kept.
+if [ -e apps/zz-probe ] || [ -e apps/hello-zz-probe ] || grep -Eq 'name = "(hello-)?zz-probe"' Cargo.lock; then
+  echo "test-new: removing leftovers from an interrupted run" >&2
+  rm -rf apps/zz-probe apps/hello-zz-probe
+  cargo metadata --format-version 1 --offline >/dev/null
+fi
+
 lock_copy="$(mktemp)"
 install_a=""
 install_b=""
@@ -11,6 +20,9 @@ cp Cargo.lock "$lock_copy"
 
 cleanup() {
   rm -rf apps/zz-probe apps/hello-zz-probe
+  # Directories a refusal check would have created if `just new` wrongly accepted
+  # the name; only untracked ones are removed.
+  git clean -fdxq -- apps/Bad_Name apps/type apps/fn apps/con apps/test apps/rsutils-core
   [ -z "$install_a" ] || rm -rf "$install_a"
   [ -z "$install_b" ] || rm -rf "$install_b"
   cp "$lock_copy" Cargo.lock

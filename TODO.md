@@ -33,9 +33,3 @@ Open items. The repository is public, so the `TODO-CONTACT` placeholders are vis
 - [ ] Once releases exist, decide whether to keep GitHub attestations
       (experimental).
 - [ ] Add signing for macOS and Windows binaries (also in `ROADMAP.md`).
-- [ ] Make `scripts/test-new.sh` clean up directories that `just new` wrongly
-      created in its refusal checks (for example `apps/con`), and survive
-      `SIGKILL` without leaving a stale `zz-probe` entry in `Cargo.lock`.
-- [ ] Add a test that observes the `Verbosity::init_logging` level mapping
-      (`cargo-mutants` shows replacing the body with `()` survives). The logger
-      is process-global, so it needs a subprocess test.

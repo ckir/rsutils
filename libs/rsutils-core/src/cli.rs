@@ -41,14 +41,19 @@ impl Verbosity {
 
     /// Configures `env_logger` from [`Self::level`]; safe to call more than once.
     pub fn init_logging(&self) {
-        let filter = match self.level() {
+        // A second call fails because a logger is already set; that is fine.
+        let _ = env_logger::Builder::new()
+            .filter_level(self.filter())
+            .try_init();
+    }
+
+    fn filter(self) -> log::LevelFilter {
+        match self.level() {
             Level::Quiet => log::LevelFilter::Off,
             Level::Normal => log::LevelFilter::Warn,
             Level::Verbose => log::LevelFilter::Info,
             Level::Debug => log::LevelFilter::Debug,
-        };
-        // A second call fails because a logger is already set; that is fine.
-        let _ = env_logger::Builder::new().filter_level(filter).try_init();
+        }
     }
 }
 
@@ -74,6 +79,18 @@ mod tests {
         assert_eq!(level(&["-v"]), Level::Verbose);
         assert_eq!(level(&["-vv"]), Level::Debug);
         assert_eq!(level(&["-q"]), Level::Quiet);
+    }
+
+    #[test]
+    fn filter_maps_every_level() {
+        let filter = |args: &[&str]| {
+            let full = std::iter::once("test").chain(args.iter().copied());
+            TestCli::try_parse_from(full).unwrap().verbosity.filter()
+        };
+        assert_eq!(filter(&["-q"]), log::LevelFilter::Off);
+        assert_eq!(filter(&[]), log::LevelFilter::Warn);
+        assert_eq!(filter(&["-v"]), log::LevelFilter::Info);
+        assert_eq!(filter(&["-vv"]), log::LevelFilter::Debug);
     }
 
     #[test]
