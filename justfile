@@ -25,6 +25,7 @@ test:
     cargo nextest run --workspace --locked
     cargo test --doc --workspace --locked
     bash scripts/test-new.sh
+    bash scripts/test-policy.sh
 
 deny:
     cargo deny check
