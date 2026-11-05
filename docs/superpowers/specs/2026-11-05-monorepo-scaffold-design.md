@@ -119,7 +119,7 @@ All forks below were put to the owner after consulting the agy peer. Where we di
 - `anyhow` for application errors; `thiserror` for typed library errors is deferred until the first typed library error.
 - `cargo-shear` as an optional or non-blocking gate.
 - The licence copyright line uses the git identity.
-- Hand-kept changelog with per-app subsections, no automation on day 1.
+- Hand-kept changelog in Keep a Changelog format; per-app attribution is a bold prefix (for example `**hello:** ...`) under Added/Changed/Fixed; no automation on day 1.
 
 ## Stand-downs
 
