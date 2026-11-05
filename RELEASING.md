@@ -14,6 +14,11 @@ The whole workspace shares one version, set in `Cargo.toml` under
 
 1. Open a release pull request that:
    - bumps `[workspace.package].version` in `Cargo.toml`;
+   - runs `cargo update --workspace` (or any cargo command that rewrites the
+     lock) and commits the resulting `Cargo.lock` change: the lock records the
+     workspace crate versions, so a bump leaves it stale, and `just check`,
+     `just install` and the release tool all use `--locked` and fail on a
+     stale lock;
    - moves the `Unreleased` entries in `CHANGELOG.md` under the new version.
 2. CI runs on the pull request.
 3. Once CI is green, merge the pull request.

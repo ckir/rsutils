@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 # Exit 0 only if TOML table [<table>] in <file> has a line `<key> = <value>`.
+#
+# Limitation: a table header is recognised only when written as `[name]`,
+# optionally followed by whitespace. A header with a trailing comment
+# (`[lints] # c`) or spaces inside the brackets (`[ lints ]`) is not
+# recognised, so `just install` treats such a header as "no match".
 set -euo pipefail
 
 if [ "$#" -ne 4 ]; then

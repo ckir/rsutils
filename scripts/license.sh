@@ -3,15 +3,17 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-mode=apply
-case "${1:-}" in
-  "") ;;
-  --check) mode=check ;;
-  *) echo "Usage: bash scripts/license.sh [--check]" >&2; exit 2 ;;
-esac
-if [ "$#" -gt 1 ]; then
+usage() {
   echo "Usage: bash scripts/license.sh [--check]" >&2
   exit 2
+}
+
+# Decide the mode by argument count: none = apply, exactly --check = check.
+mode=apply
+if [ "$#" -eq 1 ] && [ "$1" = "--check" ]; then
+  mode=check
+elif [ "$#" -ne 0 ]; then
+  usage
 fi
 
 files=()

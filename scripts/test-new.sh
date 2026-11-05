@@ -37,6 +37,18 @@ for kw in type fn; do
   [ ! -e "apps/$kw" ] || fail "just new $kw created apps/$kw"
 done
 
+# names cargo or Windows reject, and names already used by a lib: nothing may be created
+for bad in con test rsutils-core; do
+  if just new "$bad"; then fail "just new $bad should have failed"; fi
+  [ "$bad" = rsutils-core ] || [ ! -e "apps/$bad" ] || fail "just new $bad created apps/$bad"
+done
+[ ! -e apps/rsutils-core ] || fail "just new rsutils-core created apps/rsutils-core"
+
+# license.sh: an empty-string argument is a usage error, not apply mode
+rc=0
+bash scripts/license.sh "" 2>/dev/null || rc=$?
+[ "$rc" -eq 2 ] || fail "license.sh \"\" should exit 2, got $rc"
+
 # (b) scaffold
 just new zz-probe || fail "just new zz-probe failed"
 
@@ -50,6 +62,15 @@ if grep -F 'template app' "$toml"; then fail "template comment leaked"; fi
 grep -F 'name = "zz-probe"' "$toml" >/dev/null || fail 'name = "zz-probe" missing'
 [ "$(sed -n 1p "$probe/src/main.rs")" = "// SPDX-License-Identifier: MIT" ] \
   || fail "main.rs lacks the SPDX header on line 1"
+
+check_no_residue() {
+  d="$1"
+  for f in Cargo.toml src/main.rs tests/cli.rs; do
+    if grep -qi template "$d/$f"; then fail "$d/$f mentions template"; fi
+  done
+  [ -n "$(tail -n 1 "$d/Cargo.toml" | tr -d ' \t\r')" ] || fail "$d/Cargo.toml ends with a blank line"
+}
+check_no_residue "$probe"
 
 # (d) build and test the copy
 cargo build -p zz-probe || fail "cargo build -p zz-probe failed"
@@ -71,6 +92,7 @@ just new hello-zz-probe || fail "just new hello-zz-probe failed"
 grep -q '^fn hello_zz_probe()' "$hz/tests/cli.rs" || fail "hello-zz-probe: identifier not renamed"
 grep -q 'cargo_bin("hello-zz-probe")' "$hz/tests/cli.rs" || fail "hello-zz-probe: cargo_bin not renamed"
 grep -q 'name = "hello-zz-probe"' "$hz/Cargo.toml" || fail "hello-zz-probe: package name not renamed"
+check_no_residue "$hz"
 cargo nextest run -p hello-zz-probe || fail "cargo nextest run -p hello-zz-probe failed"
 
 # (f)

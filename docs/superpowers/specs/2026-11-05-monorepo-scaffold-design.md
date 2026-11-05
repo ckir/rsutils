@@ -74,7 +74,7 @@ All forks below were put to the owner after consulting the agy peer. Where we di
    - **Workspace-wide (chosen)**
      - Pro: with one maintainer and no release automation, per-app releases risk an overlooked app when a shared lib changes. They also mean several tags, version bumps and changelogs per release.
      - Con: unchanged tools get a new version number.
-     - Mitigation: the root `CHANGELOG.md` has a per-app subsection under each release, listed only when that app changed.
+     - Mitigation: the root `CHANGELOG.md` uses a bold app prefix such as `**hello:** ...` on entries under Added/Changed/Fixed, for entries that concern one app.
      - Revisit trigger: apps change at very different rates, or others release them independently.
 7. **Changelog automation**
    - Hand-kept `CHANGELOG.md` in Keep a Changelog format (**chosen**). `release-plz` or `git-cliff` can be added later.
@@ -116,7 +116,7 @@ All forks below were put to the owner after consulting the agy peer. Where we di
 
 - A day-1 `rsutils-core` lib and a `hello` app that is not released.
 - Dependencies: `clap` (derive) for argument parsing.
-- `anyhow` for application errors and `thiserror` for typed library errors.
+- `anyhow` for application errors; `thiserror` for typed library errors is deferred until the first typed library error.
 - `cargo-shear` as an optional or non-blocking gate.
 - The licence copyright line uses the git identity.
 - Hand-kept changelog with per-app subsections, no automation on day 1.

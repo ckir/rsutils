@@ -1,6 +1,6 @@
 [package]
 name = "hello"
-description = "Template app for rsutils: greets the world or a named person"
+description = "Greets the world or a named person"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

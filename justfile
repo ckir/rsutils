@@ -12,18 +12,18 @@ check: fmt lint test deny typos license
     @cargo deny --version | sed -n 1p
     @typos --version | sed -n 1p
     @just --version
-    @echo "addlicense $(sed -n 's/^addlicense=//p' .github/tool-versions)"
+    @echo "addlicense (pinned) $(sed -n 's/^addlicense=//p' .github/tool-versions)"
 
 fmt:
     cargo fmt --all --check
 
 lint:
     bash scripts/check-members.sh
-    cargo clippy --workspace --all-targets -- -D warnings
+    cargo clippy --workspace --all-targets --locked -- -D warnings
 
 test:
-    cargo nextest run --workspace
-    cargo test --doc --workspace
+    cargo nextest run --workspace --locked
+    cargo test --doc --workspace --locked
     bash scripts/test-new.sh
 
 deny:
@@ -66,10 +66,24 @@ new $name:
       echo "just new: apps/$name already exists" >&2
       exit 1
     fi
+    if [ -e "libs/$name" ]; then
+      echo "just new: libs/$name already exists" >&2
+      exit 1
+    fi
     ident=$(printf '%s' "$name" | tr '-' '_')
     case "$ident" in
       as|break|const|continue|crate|else|enum|extern|false|fn|for|if|impl|in|let|loop|match|mod|move|mut|pub|ref|return|self|static|struct|super|trait|true|type|unsafe|use|where|while|async|await|dyn|abstract|become|box|do|final|macro|override|priv|typeof|unsized|virtual|yield|try|gen)
         echo "just new: $ident is a Rust keyword and cannot be a crate name" >&2
+        exit 1
+        ;;
+      build|deps|examples|incremental|test)
+        echo "just new: $name is rejected by cargo as a package name" >&2
+        exit 1
+        ;;
+    esac
+    case "$name" in
+      con|prn|aux|nul|com[1-9]|lpt[1-9])
+        echo "just new: $name is a reserved Windows device name" >&2
         exit 1
         ;;
     esac
@@ -82,4 +96,6 @@ new $name:
     done
     p="apps/$name/Cargo.toml"
     sed '/^# The template app is never released/,$d' "$p" > "$p.tmp" && mv "$p.tmp" "$p"
+    # drop trailing blank lines (buffer blanks, print them only if a non-blank line follows)
+    awk '/^[ \t\r]*$/ { blank = blank $0 "\n"; next } { printf "%s", blank; blank = ""; print }' "$p" > "$p.tmp" && mv "$p.tmp" "$p"
     echo "created apps/$name"
