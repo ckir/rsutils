@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! Shared CLI plumbing for rsutils apps.
 
 pub mod cli;

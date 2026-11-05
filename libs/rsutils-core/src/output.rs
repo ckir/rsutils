@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! Terminal output helpers.
 
 use std::fmt::Display;

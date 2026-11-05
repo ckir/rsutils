@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! Command-line flags shared by every app.
 
 use clap::Args;

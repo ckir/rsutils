@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! `hello`: the template app that `just new` copies.
 
 use std::process::ExitCode;

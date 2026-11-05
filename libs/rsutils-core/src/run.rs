@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! Entry-point helper that turns errors into an exit code.
 
 use std::process::ExitCode;
