@@ -1,0 +1,26 @@
+[package]
+name = "hello"
+description = "Template app for rsutils: greets the world or a named person"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+rsutils-core = { path = "../../libs/rsutils-core" }
+clap.workspace = true
+
+[dev-dependencies]
+assert_cmd.workspace = true
+predicates.workspace = true
+
+[lints]
+workspace = true
+
+# The template app is never released; `just new` deletes everything from the
+# next header to the end of the file, so this table must stay last.
+[package.metadata.dist]
+dist = false
