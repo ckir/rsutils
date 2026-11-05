@@ -142,7 +142,7 @@ Expected: all pass, clippy clean.
 - Produces: template text `SPDX-License-Identifier: MIT` (single line, no template variables).
 - Produces: `bash scripts/license.sh [--check]`, used verbatim later by `just license` (`--check`). It collects the `.rs` files with `git ls-files -z --cached --others --exclude-standard -- 'apps/*.rs' 'libs/*.rs'` (so `target/` is excluded because it is ignored, and no `find`/`xargs` is needed, which avoids the Windows `find.exe` and BSD-vs-GNU `xargs` differences), reads them into a bash array with a `while IFS= read -r -d ''` loop (works on macOS bash 3.2), **exits 1 with a message if zero files are found** (so the gate can never pass vacuously), then runs `addlicense [-check] -f .license-header.tmpl "${files[@]}"`. Only `.rs` files are ever passed, so `Cargo.toml` and workflow files are never touched. The script first does `cd "$(git rev-parse --show-toplevel)"`, so the relative template path `.license-header.tmpl` and the `apps`/`libs` pathspecs resolve the same way whatever directory it is run from.
 
-- [ ] **Step 1: Install and pin** `go install github.com/google/addlicense@v1.2.0`; confirm `addlicense -h` runs (`go install` writes to `$(go env GOPATH)/bin`, which may not be on `PATH`; if `addlicense` is not found, add that directory to `PATH`). If a different binary is already on `PATH`, note its version in a `.github/tool-versions` comment.
+- [ ] **Step 1: Check addlicense** (already installed at `~/.local/bin/addlicense`; do not run `go install` locally, the pinned `go install github.com/google/addlicense@v1.2.0` is for CI): confirm `addlicense -h` runs (`go install` writes to `$(go env GOPATH)/bin`, which may not be on `PATH`; if `addlicense` is not found, add that directory to `PATH`). If a different binary is already on `PATH`, note its version in a `.github/tool-versions` comment.
 - [ ] **Step 2: Write `scripts/license.sh` and the failing check**
 
 Run: `bash scripts/license.sh --check`
@@ -170,7 +170,8 @@ Expected: check exits 0; the second apply changes no file (`git status --short` 
   - `install [name]`: with a name, `cargo install --locked --path apps/<name>`; with none, loops over `apps/*` skipping crates where `scripts/toml-has.sh "$app/Cargo.toml" package.metadata.dist dist false` succeeds, with `$app` being each directory matched by `apps/*` (already `apps/<name>`, so `"$app/Cargo.toml"` is the manifest path).
 - `scripts/toml-has.sh <file> <table> <key> <value>`: exit 0 only if the TOML table `[<table>]` in `<file>` contains the line `<key> = <value>` (awk, section-aware: it only matches inside that table, so `version.workspace = true` under `[package]` never satisfies `lints workspace true`). Exit 1 otherwise. Shared by `check-members.sh`, `install` and `test-new.sh`.
 - `scripts/check-members.sh`: for every `apps/*/Cargo.toml` and `libs/*/Cargo.toml`, exit 1 and name the file unless `scripts/toml-has.sh <file> lints workspace true` succeeds.
-- `deny.toml`: licence allow-list `MIT`, `Apache-2.0`, `Unicode-3.0`, `BSD-3-Clause`, `ISC` (extend only for a real dependency that needs it); advisories deny; wildcards deny.
+- `deny.toml`: licence allow-list `MIT`, `Apache-2.0`, `Unicode-3.0`, `BSD-3-Clause`, `ISC` (extend only for a real dependency that needs it); advisories deny; wildcards deny with `allow-wildcard-paths = true` under `[bans]` so workspace path dependencies pass (reported by a scratch run; run `cargo deny init` to see the current 0.20 schema and adapt key names).
+- `typos.toml`: `[files]` with `extend-exclude = ["docs/superpowers/**", ".superpowers/**", "target/**"]` (the plan and spec quote the deliberate misspelling `recieve` and would otherwise fail `just typos`).
 - `.github/tool-versions`: five `key=value` lines with **hyphen-free keys** `nextest`, `deny`, `typos`, `just`, `addlicense` and the versions from Global Constraints. The workflow's first step exports them as `NEXTEST_VERSION`, `DENY_VERSION`, `TYPOS_VERSION`, `JUST_VERSION`, `ADDLICENSE_VERSION` (names without hyphens, so `${{ env.X }}` expressions are valid).
 - justfile first lines: `set shell := ["bash", "-euo", "pipefail", "-c"]` and `set windows-shell := ["bash", "-euo", "pipefail", "-c"]`. The builder confirms just 1.58 accepts both (just 1.58 is installed).
 
@@ -220,7 +221,7 @@ Expected: script ends `ok`; `git status --short` shows no leftover `apps/zz-prob
 
 Run: `gh workflow list` after push, or `actionlint .github/workflows/ci.yml` if available; otherwise `python3 -c "import yaml,sys; yaml.safe_load(open('.github/workflows/ci.yml'))"`.
 Expected: parses with no errors. Also assert the Dependabot file locally: `python3 -c "import yaml; d=yaml.safe_load(open('.github/dependabot.yml')); assert d['updates'] and all(u.get('directory')=='/' and u.get('schedule',{}).get('interval')=='weekly' for u in d['updates']), d; print([u['package-ecosystem'] for u in d['updates']])"`; expected output `['cargo', 'github-actions']`.
-- [ ] **Step 4: Push a branch and open a PR** (only with the owner's go-ahead for pushing); expect all three matrix jobs green. Also have the Windows job print `uname -o` and `bash --version | head -1` before `just check`: `uname -o` must be `Msys` (Git Bash). A different `bash` (for example the WSL launcher in System32) would be visible there, and the fix is to put Git's `bash` first on `PATH`. Report per-OS results; fix Windows-specific failures (shell, paths) at the root, not by skipping a gate.
+- [ ] **Step 4: Push a branch and open a PR** (only with the owner's go-ahead for pushing; **skipped during automated execution: record it as pending for the owner and do not push**); expect all three matrix jobs green. Also have the Windows job print `uname -o` and `bash --version | head -1` before `just check`: `uname -o` must be `Msys` (Git Bash). A different `bash` (for example the WSL launcher in System32) would be visible there, and the fix is to put Git's `bash` first on `PATH`. Report per-OS results; fix Windows-specific failures (shell, paths) at the root, not by skipping a gate.
 - [ ] **Step 5: Commit** `ci: add three-OS gate workflow and dependabot`
 
 ### Task 8: Community docs and templates
@@ -243,12 +244,12 @@ Expected: parses with no errors. Also assert the Dependabot file locally: `pytho
 - [ ] **Step 1: Write the files** per Produces.
 - [ ] **Step 2: Verify**
 
-Run: `just typos && just check && grep -rl "TODO-CONTACT" --include=*.md . | grep -v '^./TODO.md$' | sort`
+Run: `just typos && just check && grep -rl "TODO-CONTACT" --include=*.md --exclude-dir=docs --exclude-dir=.superpowers --exclude-dir=target . | grep -v '^./TODO.md$' | sort`
 Expected: gates pass; the printed files are exactly the files `TODO.md` lists as holding a contact placeholder (`CODE_OF_CONDUCT.md`, `SECURITY.md`), no more and no fewer.
 Template checks: `for f in .github/ISSUE_TEMPLATE/*.md; do head -1 "$f" | grep -qx -- '---' && grep -q '^name:' "$f" && grep -q '^about:' "$f" || echo "bad front matter: $f"; done` must print nothing, and `grep -q 'just check' .github/pull_request_template.md` must succeed (the PR template carries a "just check passes" checklist item).
 - [ ] **Step 3: Verify links**
 
-Run: `mlc --offline --ignore-path target .` (`mlc` takes a single directory argument, not a file glob; `--offline` skips web links).
+Run: `mlc --offline --ignore-path target,.superpowers .` (`mlc` takes a single directory argument, not a file glob; `--offline` skips web links).
 Expected: exit 0, no broken relative links.
 - [ ] **Step 4: Commit** `docs: add community docs, release runbook and GitHub templates`
 
