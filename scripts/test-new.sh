@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Test `just new` and `just install` end to end with a throwaway app, zz-probe.
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+lock_copy="$(mktemp)"
+install_a=""
+install_b=""
+cp Cargo.lock "$lock_copy"
+
+cleanup() {
+  rm -rf apps/zz-probe
+  [ -z "$install_a" ] || rm -rf "$install_a"
+  [ -z "$install_b" ] || rm -rf "$install_b"
+  cp "$lock_copy" Cargo.lock
+  rm -f "$lock_copy"
+}
+trap cleanup EXIT
+
+fail() {
+  echo "test-new: FAIL: $*" >&2
+  exit 1
+}
+
+probe=apps/zz-probe
+toml="$probe/Cargo.toml"
+
+# (a) negative cases
+if just new Bad_Name; then fail "just new Bad_Name should have failed"; fi
+[ ! -e apps/Bad_Name ] || fail "just new Bad_Name created apps/Bad_Name"
+if just new hello; then fail "just new hello should have failed"; fi
+[ -z "$(git status --short apps/hello)" ] || fail "just new hello changed apps/hello"
+
+# (b) scaffold
+just new zz-probe || fail "just new zz-probe failed"
+
+# (c) generated files
+bash scripts/toml-has.sh "$toml" lints workspace true || fail "[lints] workspace = true missing"
+if bash scripts/toml-has.sh "$toml" package.metadata.dist dist false; then
+  fail "dist = false leaked into the new app"
+fi
+if grep -F '[package.metadata.dist]' "$toml"; then fail "dist table header leaked"; fi
+if grep -F 'template app' "$toml"; then fail "template comment leaked"; fi
+grep -F 'name = "zz-probe"' "$toml" >/dev/null || fail 'name = "zz-probe" missing'
+[ "$(sed -n 1p "$probe/src/main.rs")" = "// SPDX-License-Identifier: MIT" ] \
+  || fail "main.rs lacks the SPDX header on line 1"
+
+# (d) build and test the copy
+cargo build -p zz-probe || fail "cargo build -p zz-probe failed"
+cargo nextest run -p zz-probe || fail "cargo nextest run -p zz-probe failed"
+
+# (e) install
+install_a="$(mktemp -d)"
+CARGO_INSTALL_ROOT="$install_a" just install zz-probe || fail "just install zz-probe failed"
+ls "$install_a"/bin/zz-probe* >/dev/null 2>&1 || fail "install zz-probe left no bin/zz-probe*"
+
+install_b="$(mktemp -d)"
+CARGO_INSTALL_ROOT="$install_b" just install || fail "just install (all) failed"
+ls "$install_b"/bin/zz-probe* >/dev/null 2>&1 || fail "install (all) left no bin/zz-probe*"
+if ls "$install_b"/bin/hello* >/dev/null 2>&1; then fail "install (all) installed hello"; fi
+
+# (f)
+echo ok

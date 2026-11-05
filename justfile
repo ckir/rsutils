@@ -24,6 +24,7 @@ lint:
 test:
     cargo nextest run --workspace
     cargo test --doc --workspace
+    bash scripts/test-new.sh
 
 deny:
     cargo deny check
@@ -53,6 +54,25 @@ install name="":
       done
     fi
 
-# Scaffold a new app (implemented in Task 6).
-new name:
-    @echo "just new: not implemented yet (Task 6)" >&2; exit 1
+# Scaffold a new app from apps/hello (`just new my-tool`).
+new $name:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! printf '%s\n' "$name" | grep -Eq '^[a-z][a-z0-9-]*$'; then
+      echo "just new: name must match ^[a-z][a-z0-9-]*\$: $name" >&2
+      exit 1
+    fi
+    if [ -e "apps/$name" ]; then
+      echo "just new: apps/$name already exists" >&2
+      exit 1
+    fi
+    ident=$(printf '%s' "$name" | tr '-' '_')
+    cp -R apps/hello "apps/$name"
+    for f in Cargo.toml src/main.rs tests/cli.rs; do
+      p="apps/$name/$f"
+      sed "s/hello(/$ident(/g" "$p" > "$p.tmp" && mv "$p.tmp" "$p"
+      sed "s/hello/$name/g" "$p" > "$p.tmp" && mv "$p.tmp" "$p"
+    done
+    p="apps/$name/Cargo.toml"
+    sed '/^# The template app is never released/,$d' "$p" > "$p.tmp" && mv "$p.tmp" "$p"
+    echo "created apps/$name"
