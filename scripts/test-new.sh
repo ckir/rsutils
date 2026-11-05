@@ -10,7 +10,7 @@ install_b=""
 cp Cargo.lock "$lock_copy"
 
 cleanup() {
-  rm -rf apps/zz-probe
+  rm -rf apps/zz-probe apps/hello-zz-probe
   [ -z "$install_a" ] || rm -rf "$install_a"
   [ -z "$install_b" ] || rm -rf "$install_b"
   cp "$lock_copy" Cargo.lock
@@ -31,6 +31,11 @@ if just new Bad_Name; then fail "just new Bad_Name should have failed"; fi
 [ ! -e apps/Bad_Name ] || fail "just new Bad_Name created apps/Bad_Name"
 if just new hello; then fail "just new hello should have failed"; fi
 [ -z "$(git status --short apps/hello)" ] || fail "just new hello changed apps/hello"
+
+for kw in type fn; do
+  if just new "$kw"; then fail "just new $kw should have failed"; fi
+  [ ! -e "apps/$kw" ] || fail "just new $kw created apps/$kw"
+done
 
 # (b) scaffold
 just new zz-probe || fail "just new zz-probe failed"
@@ -59,6 +64,14 @@ install_b="$(mktemp -d)"
 CARGO_INSTALL_ROOT="$install_b" just install || fail "just install (all) failed"
 ls "$install_b"/bin/zz-probe* >/dev/null 2>&1 || fail "install (all) left no bin/zz-probe*"
 if ls "$install_b"/bin/hello* >/dev/null 2>&1; then fail "install (all) installed hello"; fi
+
+# (e2) a name that starts with hello must not be mangled by the rename
+hz=apps/hello-zz-probe
+just new hello-zz-probe || fail "just new hello-zz-probe failed"
+grep -q '^fn hello_zz_probe()' "$hz/tests/cli.rs" || fail "hello-zz-probe: identifier not renamed"
+grep -q 'cargo_bin("hello-zz-probe")' "$hz/tests/cli.rs" || fail "hello-zz-probe: cargo_bin not renamed"
+grep -q 'name = "hello-zz-probe"' "$hz/Cargo.toml" || fail "hello-zz-probe: package name not renamed"
+cargo nextest run -p hello-zz-probe || fail "cargo nextest run -p hello-zz-probe failed"
 
 # (f)
 echo ok
