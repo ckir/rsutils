@@ -13,10 +13,10 @@ Open items. The repository is public, so the `TODO-CONTACT` placeholders are vis
       macOS runs bash 3.2.57. The first macOS attempt never got a hosted runner
       (GitHub capacity notice) and passed on re-run, so a macOS job can need a
       manual re-run when GitHub is short of arm64 runners.
-- [ ] Open one pull request to exercise what the push run did not (PR #1
-      is in flight): the
-      `pull_request` trigger and its concurrency group (superseded PR runs
-      should cancel, pushes to `main` should not).
+- [x] Open one pull request to exercise what the push run did not. PR #1
+      ran the `pull_request` trigger on all three systems, and pushing a second
+      commit cancelled the superseded run (run 42108407471 cancelled, run
+      42108441158 passed).
 - [x] Confirm `just`'s shell behaviour on Windows. The `justfile` sets
       `windows-shell` explicitly, and that setting works on `windows-latest`
       under Git Bash, so `just`'s own default no longer matters.
