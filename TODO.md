@@ -33,3 +33,9 @@ Open items. The repository is public, so the `TODO-CONTACT` placeholders are vis
 - [ ] Once releases exist, decide whether to keep GitHub attestations
       (experimental).
 - [ ] Add signing for macOS and Windows binaries (also in `ROADMAP.md`).
+- [ ] Make a stray directory under `apps/` or `libs/` easier to diagnose. A
+      directory without a `Cargo.toml` (empty, or holding only an ignored
+      `target/` left behind when switching branches) makes every `cargo`
+      command exit 101, because the workspace members are the globs `apps/*`
+      and `libs/*`. Decide between a clear message from `just check` and a
+      troubleshooting note in `CONTRIBUTING.md`.
