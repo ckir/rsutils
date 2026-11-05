@@ -13,8 +13,8 @@ Open items. The repository is public, so the `TODO-CONTACT` placeholders are vis
       macOS runs bash 3.2.57. The first macOS attempt never got a hosted runner
       (GitHub capacity notice) and passed on re-run, so a macOS job can need a
       manual re-run when GitHub is short of arm64 runners.
-- [ ] Open one pull request to exercise what the push run did not (in flight
-      on branch `ci/pr-trigger-check`): the
+- [ ] Open one pull request to exercise what the push run did not (PR #1
+      is in flight): the
       `pull_request` trigger and its concurrency group (superseded PR runs
       should cancel, pushes to `main` should not).
 - [x] Confirm `just`'s shell behaviour on Windows. The `justfile` sets
