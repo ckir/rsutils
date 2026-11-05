@@ -1,0 +1,69 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  gate:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Read tool versions
+        run: |
+          # Every non-blank, non-comment line must match the strict pattern;
+          # anything else fails the job, so no other variable can be injected.
+          # A trailing CR (CRLF file) does not match and therefore fails closed.
+          pattern='^(nextest|deny|typos|just|addlicense)=[A-Za-z0-9._-]+$'
+          while IFS= read -r line || [ -n "$line" ]; do
+            case "$line" in
+              '' | '#'*) continue ;;
+            esac
+            if ! [[ $line =~ $pattern ]]; then
+              echo "::error file=.github/tool-versions::invalid line in .github/tool-versions"
+              exit 1
+            fi
+            key=${line%%=*}
+            value=${line#*=}
+            echo "$(echo "$key" | tr '[:lower:]' '[:upper:]')_VERSION=$value" >> "$GITHUB_ENV"
+          done < .github/tool-versions
+
+      - name: Ensure pinned Rust toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
+        with:
+          tool: cargo-nextest@${{ env.NEXTEST_VERSION }},cargo-deny@${{ env.DENY_VERSION }},typos@${{ env.TYPOS_VERSION }},just@${{ env.JUST_VERSION }}
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: stable
+          cache: false
+
+      - name: Install addlicense
+        run: |
+          go install "github.com/google/addlicense@${ADDLICENSE_VERSION}"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Diagnostics
+        run: |
+          uname -o
+          bash --version | head -1
+
+      - run: just check
