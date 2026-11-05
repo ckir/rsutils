@@ -1,18 +1,24 @@
 # TODO
 
-Open items. Nothing is published while the contact placeholders remain.
+Open items. The repository is public, so the `TODO-CONTACT` placeholders are visible until they are replaced.
 
 - [ ] Replace the `TODO-CONTACT` placeholder in `CODE_OF_CONDUCT.md`.
 - [ ] Replace the `TODO-CONTACT` placeholder in `SECURITY.md`.
 - [ ] Enable GitHub private vulnerability reporting on `ckir/rsutils`.
-- [ ] Run the CI workflow for real: push a branch, open a pull request and check
-      that all three operating systems pass. Not done yet because it needs a
-      push to the remote. Check in particular that:
-  - the Windows job's diagnostics step prints `Msys` for `uname -o`;
-  - `addlicense` resolves after `go install`;
-  - the rustup toolchain step works on the runners.
-- [ ] Confirm `just`'s default shell behaviour on Windows (the `justfile` sets
-      `windows-shell` explicitly).
+- [x] Run the CI workflow for real. Done on a push to `main`
+      (https://github.com/ckir/rsutils/actions/runs/42094703408): all three
+      operating systems pass `just check`. The Windows job runs under Git Bash
+      (`uname -o` prints `Msys`), `addlicense` resolves after `go install` on
+      all three systems, and the rustup toolchain step works on the runners.
+      macOS runs bash 3.2.57. The first macOS attempt never got a hosted runner
+      (GitHub capacity notice) and passed on re-run, so a macOS job can need a
+      manual re-run when GitHub is short of arm64 runners.
+- [ ] Open one pull request to exercise what the push run did not: the
+      `pull_request` trigger and its concurrency group (superseded PR runs
+      should cancel, pushes to `main` should not).
+- [x] Confirm `just`'s shell behaviour on Windows. The `justfile` sets
+      `windows-shell` explicitly, and that setting works on `windows-latest`
+      under Git Bash, so `just`'s own default no longer matters.
 - [ ] When the first distributable app lands, generate and commit the release
       configuration (cargo-dist), then update `RELEASING.md` and the install
       section of `README.md`.
