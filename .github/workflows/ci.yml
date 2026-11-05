@@ -8,8 +8,9 @@ on:
 permissions:
   contents: read
 
+# Per-sha group on push so a pending run on main is never replaced; PR runs share one group per ref.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
