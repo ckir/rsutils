@@ -248,8 +248,9 @@ Query syntax is the same as the CLI's, regexes included. `pore.version` holds
 
 ## Contributing
 
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for the local gate, the test layout, and the
-platform and feature-flag traps worth knowing before you start.
+See the workspace [CONTRIBUTING.md](../../CONTRIBUTING.md) for the local gate, including
+the Lua module lint step. Pore's earlier notes on its test layout and platform traps stay
+in the [archived repository](https://github.com/ckir/pore/blob/master/CONTRIBUTING.md).
 
 ## Config
 The config file is located at `${XDG_CONFIG_HOME}/pore.toml`. With that unset it falls
