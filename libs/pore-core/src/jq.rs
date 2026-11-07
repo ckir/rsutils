@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! jq filter compilation and evaluation engine.
 //!
 //! Wraps [`jaq_core`] to provide a simple compile-then-run API for jq expressions.

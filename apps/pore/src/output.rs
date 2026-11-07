@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! Result output formatting.
 //!
 //! This module provides [`print_results`], which formats and prints search results

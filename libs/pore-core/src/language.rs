@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! Language support for Tantivy stemmers.
 //!
 //! This module defines [`LanguageRef`], a serializable wrapper around Tantivy's

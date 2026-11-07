@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! Abstraction for extracting named text fields from heterogeneous data sources.
 //!
 //! The [`FieldMap`] trait provides a uniform way to read string-valued fields

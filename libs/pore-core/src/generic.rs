@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! Generic document indexing for arbitrary text fields.
 //!
 //! Unlike [`FileIndex`](crate::file::FileIndex) which indexes files on disk,

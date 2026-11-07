@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! File-based full-text indexing.
 //!
 //! This module provides [`FileIndex`], which indexes the text contents of files

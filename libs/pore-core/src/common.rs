@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! Shared index infrastructure used by both [`FileIndex`](crate::file::FileIndex)
 //! and [`GenericIndex`](crate::generic::GenericIndex).
 //!

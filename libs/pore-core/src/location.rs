@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! Search result position extraction and line mapping.
 //!
 //! Tantivy stores term positions (token offsets) but not line numbers. This

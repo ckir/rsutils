@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! End-to-end coverage of the terminal rendering path.
 //!
 //! These spawn the real `pore` binary and assert on the raw bytes it writes to stdout.

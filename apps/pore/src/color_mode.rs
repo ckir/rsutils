@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! Color output mode handling.
 //!
 //! This module defines the [`ColorMode`] enum, which controls when the binary uses colored

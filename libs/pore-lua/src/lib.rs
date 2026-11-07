@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! Lua bindings for `pore` — exposes Tantivy-backed indexing to Lua scripts.
 //!
 //! This crate builds a `pore_lua` Lua module that can be loaded from Lua via

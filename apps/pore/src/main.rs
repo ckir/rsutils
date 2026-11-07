@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! The `pore` binary — a command-line interface for indexing and searching code files.
 //!
 //! Supports two subcommands:

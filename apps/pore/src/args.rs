@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! CLI argument parsing for the `pore` binary.
 //!
 //! Uses clap derive macros to define a subcommand-based CLI:

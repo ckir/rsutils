@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 use proc_macro2::{Ident, Span};
 use quote::quote;
 use syn::punctuated::Punctuated;

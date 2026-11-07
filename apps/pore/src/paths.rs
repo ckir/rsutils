@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! Base-directory resolution for the config file and the index cache.
 //!
 //! pore follows the XDG layout, but `HOME` — which the XDG fallback depends on — is not

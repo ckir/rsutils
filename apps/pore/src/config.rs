@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! Configuration file loading and option merging.
 //!
 //! This module handles loading the TOML config file from `$XDG_CONFIG_HOME/pore.toml`

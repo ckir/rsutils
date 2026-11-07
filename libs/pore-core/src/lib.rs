@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! Core library for pore — a full-text search engine built on Tantivy.
 //!
 //! This crate provides the foundational types and abstractions for building
