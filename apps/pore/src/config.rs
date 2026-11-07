@@ -34,6 +34,8 @@ const CONFIG_FILE: &str = "pore.toml";
 /// from `SearchConfig::default()`. The `#[create_option_copy]` macro generates the
 /// companion `SearchConfigOpt` struct (with `Option<T>` fields) and a `merge_from` method.
 #[create_option_copy(SearchConfigOpt)]
+// reason: these are independent config switches mirroring the TOML keys; grouping them would change the serialized shape.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Deserialize, Clone)]
 pub struct SearchConfig {
     /// Output results as JSON instead of human-readable text.
@@ -138,44 +140,46 @@ pub(crate) fn load_config_from(
     let path_str = path.to_string_lossy();
     if config_file.exists() {
         let contents = &fs::read_to_string(config_file)?;
+        // Debug-format through `dyn Debug` so the message keeps its quoted-path form.
+        let shown: &dyn std::fmt::Debug = &config_file;
         let value: Value = toml::from_str(contents)
-            .map_err(|e| anyhow!("Error parsing config file {:?}: {}", config_file, e))?;
+            .map_err(|e| anyhow!("Error parsing config file {shown:?}: {e}"))?;
         let mut index: FileIndexOptionsShape = value.clone().try_into()?;
         let mut search: SearchConfigOpt = value.clone().try_into()?;
 
         let mut found_index = false;
         if let Value::Table(table) = &value {
             // Look for a local configuration with a matching path
-            for (_, val) in table.iter() {
-                if let Value::Table(local_config) = val {
-                    if local_config.get("path") == Some(&Value::String(path_str.to_string())) {
-                        index.merge_from(&val.clone().try_into()?);
-                        search.merge_from(&val.clone().try_into()?);
-                        // Look for an index the local config
-                        if let Some(idx_name) = index_name {
-                            if let Some(local_index_config) = local_config.get(idx_name) {
-                                index.merge_from(&local_index_config.clone().try_into()?);
-                                search.merge_from(&local_index_config.clone().try_into()?);
-                                found_index = true;
-                            }
-                        }
-                        break;
+            for (_, val) in table {
+                if let Value::Table(local_config) = val
+                    && local_config.get("path") == Some(&Value::String(path_str.to_string()))
+                {
+                    index.merge_from(&val.clone().try_into()?);
+                    search.merge_from(&val.clone().try_into()?);
+                    // Look for an index the local config
+                    if let Some(idx_name) = index_name
+                        && let Some(local_index_config) = local_config.get(idx_name)
+                    {
+                        index.merge_from(&local_index_config.clone().try_into()?);
+                        search.merge_from(&local_index_config.clone().try_into()?);
+                        found_index = true;
                     }
+                    break;
                 }
             }
             // if index exists, find global index and load it
-            if let Some(name) = index_name {
-                if let Some(global_index) = table.get(&format!("index-{}", name)) {
-                    index.merge_from(&global_index.clone().try_into()?);
-                    search.merge_from(&global_index.clone().try_into()?);
-                    found_index = true;
-                }
+            if let Some(name) = index_name
+                && let Some(global_index) = table.get(&format!("index-{name}"))
+            {
+                index.merge_from(&global_index.clone().try_into()?);
+                search.merge_from(&global_index.clone().try_into()?);
+                found_index = true;
             }
         }
-        if let Some(name) = index_name {
-            if !found_index {
-                bail!("Could not find index '{}'", name);
-            }
+        if let Some(name) = index_name
+            && !found_index
+        {
+            bail!("Could not find index '{name}'");
         }
 
         return Ok((index, search));
@@ -191,7 +195,7 @@ mod tests {
 
     use crate::config::{FileIndexOptionsShape, SearchConfigOpt};
 
-    use super::{load_config_from, CONFIG_FILE};
+    use super::{CONFIG_FILE, load_config_from};
 
     #[test]
     fn parsing_opt_configs_works() {
@@ -234,7 +238,7 @@ limit = 4
         let conf_file = PathBuf::from(tmpdir.path()).join(CONFIG_FILE);
         fs::write(
             &conf_file,
-            r#"threads = 10
+            r"threads = 10
 
 [index-global_index]
 threads = 20
@@ -245,19 +249,29 @@ threads = 30
 
 [local-1.local_index]
 threads = 40
-"#,
+",
         )
         .unwrap();
 
-        let (index, _) = load_config_from(&conf_file, &PathBuf::from_str("/").unwrap(), None).unwrap();
+        let (index, _) =
+            load_config_from(&conf_file, &PathBuf::from_str("/").unwrap(), None).unwrap();
         assert_eq!(index.threads, Some(10));
-        let (index, _) =
-            load_config_from(&conf_file, &PathBuf::from_str("/").unwrap(), Some("global_index")).unwrap();
+        let (index, _) = load_config_from(
+            &conf_file,
+            &PathBuf::from_str("/").unwrap(),
+            Some("global_index"),
+        )
+        .unwrap();
         assert_eq!(index.threads, Some(20));
-        let (index, _) = load_config_from(&conf_file, &PathBuf::from_str("/foo").unwrap(), None).unwrap();
-        assert_eq!(index.threads, Some(30));
         let (index, _) =
-            load_config_from(&conf_file, &PathBuf::from_str("/foo").unwrap(), Some("local_index")).unwrap();
+            load_config_from(&conf_file, &PathBuf::from_str("/foo").unwrap(), None).unwrap();
+        assert_eq!(index.threads, Some(30));
+        let (index, _) = load_config_from(
+            &conf_file,
+            &PathBuf::from_str("/foo").unwrap(),
+            Some("local_index"),
+        )
+        .unwrap();
         assert_eq!(index.threads, Some(40));
     }
 
@@ -266,14 +280,14 @@ threads = 40
         let example = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("pore.example.toml");
         let contents = &fs::read_to_string(&example).unwrap();
         let value: toml::Value = toml::from_str(contents)
-            .unwrap_or_else(|_| panic!("Error parsing config file {:?}", example));
+            .unwrap_or_else(|_| panic!("Error parsing config file {example:?}"));
         let index: FileIndexOptionsShape = value.clone().try_into().unwrap();
         let search: SearchConfigOpt = value.clone().try_into().unwrap();
         if let Err(missing_fields) = index.all() {
-            panic!("pore.example.toml is missing fields: {:?}", missing_fields);
+            panic!("pore.example.toml is missing fields: {missing_fields:?}");
         }
         if let Err(missing_fields) = search.all() {
-            panic!("pore.example.toml is missing fields: {:?}", missing_fields);
+            panic!("pore.example.toml is missing fields: {missing_fields:?}");
         }
     }
 }

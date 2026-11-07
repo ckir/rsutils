@@ -33,17 +33,14 @@ fn snippet_segments(snippet: &str) -> Vec<(bool, String)> {
             segments.push((false, decode(&rest[..open])));
         }
         rest = &rest[open + 3..];
-        match rest.find("</b>") {
-            Some(close) => {
-                segments.push((true, decode(&rest[..close])));
-                rest = &rest[close + 4..];
-            }
+        if let Some(close) = rest.find("</b>") {
+            segments.push((true, decode(&rest[..close])));
+            rest = &rest[close + 4..];
+        } else {
             // Unterminated tag: treat the remainder as highlighted rather than dropping it.
-            None => {
-                segments.push((true, decode(rest)));
-                rest = "";
-                break;
-            }
+            segments.push((true, decode(rest)));
+            rest = "";
+            break;
         }
     }
     if !rest.is_empty() {
@@ -60,7 +57,7 @@ fn snippet_segments(snippet: &str) -> Vec<(bool, String)> {
 ///
 /// Returns `Ok(true)` if at least one result was printed, `Ok(false)` otherwise.
 pub fn print_results(
-    results: Vec<FileSearchResult>,
+    results: &[FileSearchResult],
     conf: &SearchConfig,
 ) -> Result<bool, anyhow::Error> {
     let mut stdout = StandardStream::stdout(conf.color.clone().into());
@@ -158,14 +155,14 @@ mod tests {
             color: ColorMode::Never,
             ..SearchConfig::default()
         };
-        let result = print_results(results, &conf);
+        let result = print_results(&results, &conf);
         assert!(result.unwrap());
     }
 
     #[test]
     fn print_results_empty_returns_false() {
         let conf = SearchConfig::default();
-        let result = print_results(vec![], &conf);
+        let result = print_results(&[], &conf);
         assert!(!result.unwrap());
     }
 
@@ -177,7 +174,7 @@ mod tests {
             vec![],
         )];
         let conf = SearchConfig::default();
-        let result = print_results(results, &conf);
+        let result = print_results(&results, &conf);
         assert!(result.unwrap());
     }
 }

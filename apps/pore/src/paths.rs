@@ -77,11 +77,17 @@ mod tests {
 
         // USERPROFILE alone is enough -- this is the Windows case that used to fail.
         vars.insert("USERPROFILE", "/up");
-        assert_eq!(resolve(&vars).unwrap(), PathBuf::from("/up").join(".config"));
+        assert_eq!(
+            resolve(&vars).unwrap(),
+            PathBuf::from("/up").join(".config")
+        );
 
         // HOME wins over USERPROFILE.
         vars.insert("HOME", "/home");
-        assert_eq!(resolve(&vars).unwrap(), PathBuf::from("/home").join(".config"));
+        assert_eq!(
+            resolve(&vars).unwrap(),
+            PathBuf::from("/home").join(".config")
+        );
 
         // The XDG variable wins over both, and is used as-is with no suffix.
         vars.insert("PORE_TEST_XDG", "/xdg");
@@ -89,6 +95,9 @@ mod tests {
 
         // An empty value counts as unset, or the path would resolve to the cwd.
         vars.insert("PORE_TEST_XDG", "");
-        assert_eq!(resolve(&vars).unwrap(), PathBuf::from("/home").join(".config"));
+        assert_eq!(
+            resolve(&vars).unwrap(),
+            PathBuf::from("/home").join(".config")
+        );
     }
 }

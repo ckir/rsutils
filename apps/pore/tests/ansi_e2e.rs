@@ -50,7 +50,7 @@ fn fixture() -> Vec<(&'static str, &'static str)> {
 }
 
 fn esc_count(bytes: &[u8]) -> usize {
-    bytes.iter().filter(|b| **b == ESC).count()
+    bytes.split(|&b| b == ESC).count() - 1
 }
 
 // --- no colour must mean no escape bytes at all -----------------------------------

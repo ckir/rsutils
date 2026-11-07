@@ -7,13 +7,13 @@
 #[macro_use]
 extern crate anyhow;
 
-use args::{build_search_config, Cli, CmdArg, Commands};
+use args::{Cli, CmdArg, Commands, build_search_config};
 use clap::Parser;
-use config::load_config;
 use config::SearchConfig;
-use pore_core::jq::JqEngine;
+use config::load_config;
 use pore_core::FileIndex;
 use pore_core::FileIndexOptions;
+use pore_core::jq::JqEngine;
 use std::env;
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
@@ -53,7 +53,7 @@ fn run() -> Result<bool, anyhow::Error> {
     let cli = Cli::parse();
     match cli.command {
         Commands::Search(args) => run_search(*args),
-        Commands::Eval(args) => run_eval(args),
+        Commands::Eval(args) => run_eval(&args),
     }
 }
 
@@ -95,7 +95,7 @@ fn run_search(args: args::SearchArgs) -> Result<bool, anyhow::Error> {
             Ok(true)
         }
         CmdArg::ListIndex => {
-            println!("{}", index);
+            println!("{index}");
             Ok(true)
         }
         CmdArg::Search => {
@@ -140,7 +140,7 @@ fn run_search(args: args::SearchArgs) -> Result<bool, anyhow::Error> {
                     }
                     Ok(!results.is_empty())
                 } else {
-                    output::print_results(results, &search)
+                    output::print_results(&results, &search)
                 }
             } else {
                 Ok(true)
@@ -149,7 +149,7 @@ fn run_search(args: args::SearchArgs) -> Result<bool, anyhow::Error> {
     }
 }
 
-fn run_eval(args: args::EvalArgs) -> Result<bool, anyhow::Error> {
+fn run_eval(args: &args::EvalArgs) -> Result<bool, anyhow::Error> {
     let engine = JqEngine::compile(&args.filter)?;
     let stdout = io::stdout();
     let mut out = stdout.lock();
@@ -190,10 +190,10 @@ fn find_index_dir(for_dir: &Path, index_name: Option<&str>) -> Result<PathBuf, a
         index_root.push(strip_root(for_dir));
     } else {
         index_root.push(strip_root(&env::current_dir()?));
-        index_root.push(for_dir)
+        index_root.push(for_dir);
     }
     if let Some(name) = index_name {
-        index_root.push(format!("__index_{}", name));
+        index_root.push(format!("__index_{name}"));
     }
     Ok(index_root)
 }

@@ -9,8 +9,8 @@ use std::str::FromStr;
 use std::{env, fs};
 
 use clap::{Args, Parser, Subcommand};
-use pore_core::language::LanguageRef;
 use pore_core::FileIndexOptionsShape;
+use pore_core::language::LanguageRef;
 
 use crate::color_mode::ColorMode;
 use crate::config::SearchConfigOpt;
@@ -77,6 +77,8 @@ pub enum Commands {
     Eval(EvalArgs),
 }
 
+// reason: these are independent CLI flags; grouping them would change the clap interface.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Args, Debug)]
 pub struct SearchArgs {
     /// The search query

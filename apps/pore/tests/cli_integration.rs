@@ -187,8 +187,7 @@ fn search_with_jq_filter() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
         stdout.contains("hello.txt"),
-        "Expected filename in jq output: {}",
-        stdout
+        "Expected filename in jq output: {stdout}"
     );
 }
 
@@ -225,8 +224,7 @@ fn eval_from_file() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
         stdout.contains("pore"),
-        "Expected 'pore' in eval output: {}",
-        stdout
+        "Expected 'pore' in eval output: {stdout}"
     );
 }
 
@@ -533,7 +531,10 @@ fn rust_backtrace_1_still_yields_a_usable_backtrace() {
 fn help_first_line_is_unchanged() {
     let out = pore().arg("--help").output().unwrap();
     let stdout = String::from_utf8(out.stdout).unwrap();
-    assert_eq!(stdout.lines().next(), Some("pore — full-text search powered by Tantivy"));
+    assert_eq!(
+        stdout.lines().next(),
+        Some("pore — full-text search powered by Tantivy")
+    );
 }
 
 #[test]
