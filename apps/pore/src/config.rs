@@ -124,11 +124,20 @@ pub fn load_config(
     path: &Path,
     index_name: Option<&str>,
 ) -> Result<(FileIndexOptionsShape, SearchConfigOpt), anyhow::Error> {
-    let path_str = path.to_string_lossy();
     let config_file =
         crate::paths::resolve_base_dir("XDG_CONFIG_HOME", ".config")?.join(CONFIG_FILE);
+    load_config_from(&config_file, path, index_name)
+}
+
+/// [`load_config`] with the config file location already resolved.
+pub(crate) fn load_config_from(
+    config_file: &Path,
+    path: &Path,
+    index_name: Option<&str>,
+) -> Result<(FileIndexOptionsShape, SearchConfigOpt), anyhow::Error> {
+    let path_str = path.to_string_lossy();
     if config_file.exists() {
-        let contents = &fs::read_to_string(&config_file)?;
+        let contents = &fs::read_to_string(config_file)?;
         let value: Value = toml::from_str(contents)
             .map_err(|e| anyhow!("Error parsing config file {:?}: {}", config_file, e))?;
         let mut index: FileIndexOptionsShape = value.clone().try_into()?;
@@ -176,13 +185,13 @@ pub fn load_config(
 
 #[cfg(test)]
 mod tests {
-    use std::{env, fs, path::PathBuf, str::FromStr};
+    use std::{fs, path::PathBuf, str::FromStr};
 
     use pore_core::FileIndexOptions;
 
     use crate::config::{FileIndexOptionsShape, SearchConfigOpt};
 
-    use super::{load_config, CONFIG_FILE};
+    use super::{load_config_from, CONFIG_FILE};
 
     #[test]
     fn parsing_opt_configs_works() {
@@ -222,10 +231,9 @@ limit = 4
     #[test]
     fn can_load_and_merge_defaults() {
         let tmpdir = tempfile::tempdir().unwrap();
-        env::set_var("XDG_CONFIG_HOME", tmpdir.path().as_os_str());
         let conf_file = PathBuf::from(tmpdir.path()).join(CONFIG_FILE);
         fs::write(
-            conf_file,
+            &conf_file,
             r#"threads = 10
 
 [index-global_index]
@@ -241,15 +249,15 @@ threads = 40
         )
         .unwrap();
 
-        let (index, _) = load_config(&PathBuf::from_str("/").unwrap(), None).unwrap();
+        let (index, _) = load_config_from(&conf_file, &PathBuf::from_str("/").unwrap(), None).unwrap();
         assert_eq!(index.threads, Some(10));
         let (index, _) =
-            load_config(&PathBuf::from_str("/").unwrap(), Some("global_index")).unwrap();
+            load_config_from(&conf_file, &PathBuf::from_str("/").unwrap(), Some("global_index")).unwrap();
         assert_eq!(index.threads, Some(20));
-        let (index, _) = load_config(&PathBuf::from_str("/foo").unwrap(), None).unwrap();
+        let (index, _) = load_config_from(&conf_file, &PathBuf::from_str("/foo").unwrap(), None).unwrap();
         assert_eq!(index.threads, Some(30));
         let (index, _) =
-            load_config(&PathBuf::from_str("/foo").unwrap(), Some("local_index")).unwrap();
+            load_config_from(&conf_file, &PathBuf::from_str("/foo").unwrap(), Some("local_index")).unwrap();
         assert_eq!(index.threads, Some(40));
     }
 

@@ -7,7 +7,6 @@
 //! with a bare "environment variable not found".
 
 use anyhow::anyhow;
-use std::env;
 use std::ffi::OsString;
 use std::path::PathBuf;
 
@@ -15,8 +14,8 @@ use std::path::PathBuf;
 ///
 /// An empty variable is treated as unset: an exported-but-blank `XDG_CONFIG_HOME` would
 /// otherwise resolve the config path to the process's current directory.
-fn non_empty_var(var: &str) -> Option<OsString> {
-    env::var_os(var).filter(|v| !v.is_empty())
+fn non_empty_var(var: &str, get: &impl Fn(&str) -> Option<OsString>) -> Option<OsString> {
+    get(var).filter(|v| !v.is_empty())
 }
 
 /// Resolves a base directory, preferring `xdg_var` and falling back to `<home>/<suffix>`.
@@ -31,11 +30,21 @@ fn non_empty_var(var: &str) -> Option<OsString> {
 /// than propagating `VarError::NotPresent`, which renders as "environment variable not
 /// found" and names neither the variable nor a remedy.
 pub fn resolve_base_dir(xdg_var: &str, suffix: &str) -> Result<PathBuf, anyhow::Error> {
-    if let Some(dir) = non_empty_var(xdg_var) {
+    resolve_base_dir_with(xdg_var, suffix, |v| std::env::var_os(v))
+}
+
+/// [`resolve_base_dir`] with the environment lookup injected, so tests need not mutate
+/// process-wide state.
+pub(crate) fn resolve_base_dir_with(
+    xdg_var: &str,
+    suffix: &str,
+    get: impl Fn(&str) -> Option<OsString>,
+) -> Result<PathBuf, anyhow::Error> {
+    if let Some(dir) = non_empty_var(xdg_var, &get) {
         return Ok(PathBuf::from(dir));
     }
     for var in ["HOME", "USERPROFILE"] {
-        if let Some(home) = non_empty_var(var) {
+        if let Some(home) = non_empty_var(var, &get) {
             return Ok(PathBuf::from(home).join(suffix));
         }
     }
@@ -48,60 +57,38 @@ pub fn resolve_base_dir(xdg_var: &str, suffix: &str) -> Result<PathBuf, anyhow::
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
-    /// These mutate process-wide environment state, so they are kept in one test to
-    /// avoid racing the other tests in this binary.
     #[test]
     fn resolution_order_and_error() {
-        let saved: Vec<_> = ["PORE_TEST_XDG", "HOME", "USERPROFILE"]
-            .iter()
-            .map(|v| (*v, env::var_os(v)))
-            .collect();
-
-        env::remove_var("PORE_TEST_XDG");
-        env::remove_var("HOME");
-        env::remove_var("USERPROFILE");
+        let mut vars: HashMap<&str, &str> = HashMap::new();
+        let resolve = |vars: &HashMap<&str, &str>| {
+            resolve_base_dir_with("PORE_TEST_XDG", ".config", |v| {
+                vars.get(v).map(OsString::from)
+            })
+        };
 
         // Nothing set: the error names each variable consulted.
-        let err = resolve_base_dir("PORE_TEST_XDG", ".config")
+        let err = resolve(&vars)
             .expect_err("no variables set must not resolve")
             .to_string();
         assert!(err.contains("PORE_TEST_XDG"), "{err}");
         assert!(err.contains("USERPROFILE"), "{err}");
 
         // USERPROFILE alone is enough -- this is the Windows case that used to fail.
-        env::set_var("USERPROFILE", "/up");
-        assert_eq!(
-            resolve_base_dir("PORE_TEST_XDG", ".config").unwrap(),
-            PathBuf::from("/up").join(".config")
-        );
+        vars.insert("USERPROFILE", "/up");
+        assert_eq!(resolve(&vars).unwrap(), PathBuf::from("/up").join(".config"));
 
         // HOME wins over USERPROFILE.
-        env::set_var("HOME", "/home");
-        assert_eq!(
-            resolve_base_dir("PORE_TEST_XDG", ".config").unwrap(),
-            PathBuf::from("/home").join(".config")
-        );
+        vars.insert("HOME", "/home");
+        assert_eq!(resolve(&vars).unwrap(), PathBuf::from("/home").join(".config"));
 
         // The XDG variable wins over both, and is used as-is with no suffix.
-        env::set_var("PORE_TEST_XDG", "/xdg");
-        assert_eq!(
-            resolve_base_dir("PORE_TEST_XDG", ".config").unwrap(),
-            PathBuf::from("/xdg")
-        );
+        vars.insert("PORE_TEST_XDG", "/xdg");
+        assert_eq!(resolve(&vars).unwrap(), PathBuf::from("/xdg"));
 
         // An empty value counts as unset, or the path would resolve to the cwd.
-        env::set_var("PORE_TEST_XDG", "");
-        assert_eq!(
-            resolve_base_dir("PORE_TEST_XDG", ".config").unwrap(),
-            PathBuf::from("/home").join(".config")
-        );
-
-        for (var, val) in saved {
-            match val {
-                Some(v) => env::set_var(var, v),
-                None => env::remove_var(var),
-            }
-        }
+        vars.insert("PORE_TEST_XDG", "");
+        assert_eq!(resolve(&vars).unwrap(), PathBuf::from("/home").join(".config"));
     }
 }

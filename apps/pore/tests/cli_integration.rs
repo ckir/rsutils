@@ -542,3 +542,32 @@ fn package_name_is_pore() {
     // the package would orphan every existing user's indexes.
     assert_eq!(env!("CARGO_PKG_NAME"), "pore");
 }
+
+#[test]
+fn config_file_in_xdg_config_home_is_used() {
+    let cfg = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let cache = tempfile::tempdir().unwrap();
+    let project = tempfile::tempdir().unwrap();
+    fs::write(cfg.path().join("pore.toml"), "limit = 1\n").unwrap();
+    fs::write(project.path().join("a.txt"), "the wolf").unwrap();
+    fs::write(project.path().join("b.txt"), "another wolf").unwrap();
+
+    let out = pore()
+        .env("XDG_CONFIG_HOME", cfg.path())
+        .env("HOME", home.path())
+        .env("XDG_CACHE_HOME", cache.path())
+        .arg("search")
+        .arg("--json")
+        .arg("wolf")
+        .arg(project.path())
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let stdout = String::from_utf8(out).unwrap();
+    let lines: Vec<&str> = stdout.lines().filter(|l| !l.trim().is_empty()).collect();
+    assert_eq!(lines.len(), 1, "limit = 1 from the config file: {stdout}");
+    serde_json::from_str::<serde_json::Value>(lines[0]).unwrap();
+}
