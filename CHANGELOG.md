@@ -16,4 +16,6 @@ The workspace has one version, shared by every app (see [RELEASING.md](RELEASING
 
 ## [Unreleased]
 
-No release has been published yet.
+### Added
+
+- **pore:** moved into this workspace from ckir/pore (history preserved); the workspace version moves to 0.4.0 to continue pore's numbering.

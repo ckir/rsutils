@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+History up to 0.3.0 is frozen here. Later changes are in the root
+[CHANGELOG.md](../../CHANGELOG.md).
+
 ## [Unreleased]
 
 ## [0.3.0] - 2026-09-10

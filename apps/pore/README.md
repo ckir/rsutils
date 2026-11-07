@@ -1,6 +1,6 @@
 # Pore
 
-[![Build Status](https://github.com/ckir/pore/actions/workflows/ci.yml/badge.svg)](https://github.com/ckir/pore/actions/workflows/ci.yml)
+[![Build Status](https://github.com/ckir/rsutils/actions/workflows/ci.yml/badge.svg)](https://github.com/ckir/rsutils/actions/workflows/ci.yml)
 > pore (verb) \
 > to read or study attentively
 
@@ -130,6 +130,16 @@ Options:
   -h, --help  Print help
 ```
 
+## Install from source
+
+```bash
+cargo install --locked --git https://github.com/ckir/rsutils pore
+```
+
+Pore now lives in the [rsutils](https://github.com/ckir/rsutils) workspace, at
+`apps/pore`. The old `ckir/pore` repository is archived, and its releases and docs stay
+frozen at 0.3.0.
+
 ## Examples
 
 ```bash
@@ -167,12 +177,12 @@ pore search "secret" --hidden
 
 ## Lua module
 
-`pore-lua` builds a native Lua module, so a Lua script can index and query directly
+`pore-lua` (in `libs/pore-lua`) builds a native Lua module, so a Lua script can index and query directly
 instead of shelling out to the CLI and parsing its output.
 
 ### Building
 
-The default features build a cdylib with Lua **linked in**, which is not loadable as a
+Run this from the workspace root. The default features build a cdylib with Lua **linked in**, which is not loadable as a
 Lua module. You need the `module` feature, and it is mutually exclusive with the default
 `vendored`:
 
@@ -238,7 +248,7 @@ Query syntax is the same as the CLI's, regexes included. `pore.version` holds
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the local gate, the test layout, and the
+See [CONTRIBUTING.md](../../CONTRIBUTING.md) for the local gate, the test layout, and the
 platform and feature-flag traps worth knowing before you start.
 
 ## Config
@@ -247,7 +257,7 @@ back to `$HOME/.config/pore.toml`, and then to `%USERPROFILE%\.config\pore.toml`
 which is the one that applies on Windows, where `HOME` is not set unless something like
 Git Bash or WSL sets it. The index cache resolves the same way via `${XDG_CACHE_HOME}`,
 falling back to `.cache` under the same home directory. An example can be found at
-[pore.example.toml](https://github.com/ckir/pore/blob/master/pore-bin/pore.example.toml).
+[pore.example.toml](https://github.com/ckir/rsutils/blob/main/apps/pore/pore.example.toml).
 The format is:
 
 ```toml

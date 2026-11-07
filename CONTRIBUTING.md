@@ -54,7 +54,9 @@ This prints the tool versions used, then runs six gates in order:
 
 1. `fmt`: `cargo fmt --all --check`.
 2. `lint`: the policy script `scripts/check-members.sh`, then clippy with
-   `-D warnings`.
+   `-D warnings`, then a third step that lints the Lua module build, which no
+   default build compiles:
+   `cargo clippy -p pore-lua --no-default-features --features lua55,module --locked -- -D warnings`.
 3. `test`: `cargo nextest`, doc tests, and `scripts/test-new.sh` (which tests
    `just new`).
 4. `deny`: `cargo deny check`. It fetches the RustSec advisory database, so it
