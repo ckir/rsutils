@@ -40,9 +40,11 @@ pub trait IndexMetadata<T: MetadataConfig + Eq> {
     /// Returns the stored configuration.
     fn config(&self) -> &T;
     /// Returns the pore version that created this index.
+    // reason: nothing in the crate calls this outside a unit test; it is kept as the read accessor for the persisted `version` field
     #[allow(dead_code)]
     fn version(&self) -> &str;
     /// Returns the timestamp of the last successful index update.
+    // reason: nothing in the crate reads this; only `set_last_update` is used. Kept as the read accessor for the persisted `last_update` field
     #[allow(dead_code)]
     fn last_update(&self) -> &DateTime<Utc>;
     /// Updates the last-update timestamp.

@@ -1,3 +1,4 @@
+// reason: this helper module is compiled into several integration-test binaries, and each one uses only some of the helpers
 #![allow(dead_code)]
 use pore_core::{FileIndex, FileIndexOptions, GenericIndex, IndexOptions};
 use std::fs;
