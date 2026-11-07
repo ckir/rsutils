@@ -1,0 +1,26 @@
+[package]
+name = "pore-lua"
+version = "0.3.0"
+edition = "2021"
+
+[dependencies]
+mlua = { version = "0.12.0", features = ["async", "macros", "serialize"] }
+pore-core = { path = "../pore-core" }
+tantivy = "0.26.1"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dev-dependencies]
+tempfile = "3.27.0"
+
+[features]
+default = ["lua55", "vendored"]
+lua55 = ["mlua/lua55"]
+lua54 = ["mlua/lua54"]
+lua53 = ["mlua/lua53"]
+lua52 = ["mlua/lua52"]
+lua51 = ["mlua/lua51"]
+luajit = ["mlua/luajit"]
+vendored = ["mlua/vendored"]
+module = ["mlua/module"]
