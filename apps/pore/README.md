@@ -132,12 +132,14 @@ Options:
 
 ## Install from source
 
+Requires Rust 1.99 or newer.
+
 ```bash
 cargo install --locked --git https://github.com/ckir/rsutils pore
 ```
 
 Pore now lives in the [rsutils](https://github.com/ckir/rsutils) workspace, at
-`apps/pore`. The old `ckir/pore` repository is archived, and its releases and docs stay
+`apps/pore`. The old `ckir/pore` repository is being archived, and its releases and docs stay
 frozen at 0.3.0.
 
 ## Examples

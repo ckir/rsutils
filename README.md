@@ -11,7 +11,8 @@ Small file utilities written in Rust, kept in one Cargo workspace.
 
 ## Install
 
-**No releases yet.** Nothing has been published. The plan is to publish prebuilt
+**No releases yet.** Nothing has been published. pore can be installed from source today:
+see [apps/pore/README.md](apps/pore/README.md#install-from-source). The plan is to publish prebuilt
 binaries on [GitHub Releases](https://github.com/ckir/rsutils/releases) for:
 
 - Linux: x86_64 and aarch64 (static musl)

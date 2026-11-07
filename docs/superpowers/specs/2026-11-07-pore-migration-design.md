@@ -1,6 +1,6 @@
 # Moving pore into rsutils: design
 
-Date: 2026-11-07. Status: draft for owner approval. Reviewed: builder check, then an adversarial panel (one solo pass plus three agy rounds, the last one clean).
+Date: 2026-11-07. Status: approved by the owner on 2026-11-07. Reviewed: builder check, then an adversarial panel (one solo pass plus three agy rounds, the last one clean).
 
 ## Intent
 
@@ -11,7 +11,7 @@ is archived. The owner uses `pore-lua` from Lua, so the Lua module moves too.
 ## Goals
 
 - All four pore crates live in this workspace and pass `just check` on Linux, macOS and Windows CI.
-- pore's commit history (88 commits, including the original author's) is preserved, so `git log` and
+- pore's commit history (88 commits, of which 61 survive filter-repo after empty commits are pruned, including the original author's) is preserved, so `git log` and
   `git blame` on pore code work here after the old repository is archived.
 - pore meets this repository's written bar: edition 2024, workspace lints (`unsafe_code = "forbid"`,
   clippy pedantic, `-D warnings`), licence headers, cargo-deny.
