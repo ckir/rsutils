@@ -528,3 +528,17 @@ fn rust_backtrace_1_still_yields_a_usable_backtrace() {
         "a backtrace should be readable multi-line output, not one blob: {stderr}"
     );
 }
+
+#[test]
+fn help_first_line_is_unchanged() {
+    let out = pore().arg("--help").output().unwrap();
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert_eq!(stdout.lines().next(), Some("pore — full-text search powered by Tantivy"));
+}
+
+#[test]
+fn package_name_is_pore() {
+    // The index cache directory is keyed on the package name (src/main.rs), so renaming
+    // the package would orphan every existing user's indexes.
+    assert_eq!(env!("CARGO_PKG_NAME"), "pore");
+}

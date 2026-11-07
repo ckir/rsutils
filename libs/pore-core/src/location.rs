@@ -112,7 +112,7 @@ pub fn positions_to_lines(
     lines: &mut Vec<Line>,
 ) -> Result<(), anyhow::Error> {
     let mut tokenizer = index.index().tokenizer_for_field(*index.contents())?;
-    if let Some(Reverse(mut next_pos)) = positions.peek() {
+    if let Some(&Reverse(mut next_pos)) = positions.peek() {
         let file = File::open(filepath)?;
         let mut reader = io::BufReader::new(file);
         let mut line = String::new();

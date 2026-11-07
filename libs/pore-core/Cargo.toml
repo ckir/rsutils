@@ -1,23 +1,32 @@
 [package]
 name = "pore-core"
-version = "0.3.0"
-edition = "2021"
+description = "Indexing and search engine behind pore"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+authors = ["Steven Arcangeli", "Costas Kirgoussios"]
+publish = false
 
 [dependencies]
-anyhow = { version = "1.0.104", features = ["backtrace"] }
-chrono = { version = "0.4.45", features = ["serde"] }
-ignore = "0.4.33"
-mlua = { version = "0.12.0", features = ["async", "macros"] }
-serde = "1.0.229"
-serde_json = "1.0.151"
-tantivy = "0.26.1"
-macros = { path = "../macros" }
-jaq-core = "3.1.0"
-jaq-std = "3.0.1"
-jaq-json = { version = "2.0.2", features = ["serde"] }
+anyhow = { workspace = true, features = ["backtrace"] }
+chrono = { workspace = true, features = ["serde"] }
+ignore.workspace = true
+mlua = { workspace = true, features = ["async", "macros"] }
+serde.workspace = true
+serde_json.workspace = true
+tantivy.workspace = true
+macros = { package = "pore-macros", path = "../pore-macros" }
+jaq-core.workspace = true
+jaq-std.workspace = true
+jaq-json = { workspace = true, features = ["serde"] }
 
 [dev-dependencies]
-tempfile = "3.27.0"
+tempfile.workspace = true
 
 [features]
 vendored = ["mlua/vendored", "mlua/lua55"]
+
+[lints]
+workspace = true

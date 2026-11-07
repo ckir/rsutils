@@ -1,0 +1,1 @@
+[{"name":"git-filter-repo","why":"history-preserving import of external repos","install":"sudo apt-get install -y git-filter-repo","in_path":"git-filter-repo"}]
