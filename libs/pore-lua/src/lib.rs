@@ -25,18 +25,23 @@
 //! The module also exports a `version` table with `full`, `major`, `minor`, `patch`,
 //! and `pre` fields, populated from Cargo package metadata at build time.
 
-#![allow(dead_code, unused_imports)]
-
-use std::path::PathBuf;
-use std::str::FromStr;
-
-use mlua::prelude::*;
+#[cfg(any(feature = "module", test))]
 use mlua::LuaSerdeExt;
+#[cfg(any(feature = "module", test))]
+use mlua::prelude::*;
+#[cfg(any(feature = "module", test))]
 use mlua::{UserData, UserDataMethods};
+#[cfg(feature = "module")]
+use pore_core::FileIndexOptionsShape;
+#[cfg(any(feature = "module", test))]
 use pore_core::{
-    FileIndex, FileIndexOptionsShape, FileSearchOptionsShape, GenericIndex, IndexOptionsShape,
-    SearchOptionsShape,
+    FileIndex, FileSearchOptionsShape, GenericIndex, IndexOptionsShape, SearchOptionsShape,
 };
+#[cfg(feature = "module")]
+use std::path::PathBuf;
+#[cfg(feature = "module")]
+use std::str::FromStr;
+#[cfg(any(feature = "module", test))]
 use tantivy::query::QueryParser;
 
 /// Entry point for the Lua module. Called when the shared library is loaded via
@@ -56,18 +61,18 @@ fn pore_lua(lua: &Lua) -> LuaResult<LuaTable> {
         |_, (for_dir, cache_dir, config): (String, Option<String>, FileIndexOptionsShape)| {
             let index = FileIndex::get_or_create(
                 PathBuf::from_str(&for_dir)
-                    .map_err(|_| LuaError::RuntimeError(format!("Invalid path {}", for_dir)))?,
+                    .map_err(|_| LuaError::RuntimeError(format!("Invalid path {for_dir}")))?,
                 cache_dir
                     .as_ref()
                     .map(|s| {
-                        PathBuf::from_str(&s).map_err(|_| {
-                            LuaError::RuntimeError(format!("Invalid path {:?}", cache_dir))
+                        PathBuf::from_str(s).map_err(|_| {
+                            LuaError::RuntimeError(format!("Invalid path {cache_dir:?}"))
                         })
                     })
                     .transpose()?,
                 &config.into(),
             )
-            .map_err(|e| LuaError::RuntimeError(format!("Error creating index {:?}", e)))?;
+            .map_err(|e| LuaError::RuntimeError(format!("Error creating index {e:?}")))?;
             Ok(FileIndexLua { index })
         },
     )?;
@@ -88,14 +93,14 @@ fn pore_lua(lua: &Lua) -> LuaResult<LuaTable> {
                 cache_dir
                     .as_ref()
                     .map(|s| {
-                        PathBuf::from_str(&s).map_err(|_| {
-                            LuaError::RuntimeError(format!("Invalid path {:?}", cache_dir))
+                        PathBuf::from_str(s).map_err(|_| {
+                            LuaError::RuntimeError(format!("Invalid path {cache_dir:?}"))
                         })
                     })
                     .transpose()?
                     .as_deref(),
             )
-            .map_err(|e| LuaError::RuntimeError(format!("Error creating index {:?}", e)))?;
+            .map_err(|e| LuaError::RuntimeError(format!("Error creating index {e:?}")))?;
             Ok(GenericIndexLua { index })
         },
     )?;
@@ -105,6 +110,7 @@ fn pore_lua(lua: &Lua) -> LuaResult<LuaTable> {
 }
 
 /// Sets a key in a Lua table if the corresponding environment variable is non-empty.
+#[cfg(any(feature = "module", test))]
 macro_rules! set_nonempty_env {
     ($tbl:ident, $key:literal, $env_key:literal) => {{
         let value = env!($env_key);
@@ -117,11 +123,13 @@ macro_rules! set_nonempty_env {
 /// Lua userdata wrapping a [`FileIndex`](pore_core::FileIndex).
 ///
 /// Provides methods: `update(rebuild?)`, `delete()`, `search(query, opts)`, and `__tostring`.
+#[cfg(any(feature = "module", test))]
 #[derive(Debug, Clone)]
 struct FileIndexLua {
     index: FileIndex,
 }
 
+#[cfg(any(feature = "module", test))]
 impl UserData for FileIndexLua {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method_mut("update", |_, this, (rebuild,): (Option<bool>,)| {
@@ -130,7 +138,7 @@ impl UserData for FileIndexLua {
                 .map_err(|e| LuaError::RuntimeError(e.to_string()))?;
             Ok(())
         });
-        methods.add_method_mut("delete", |_, this, _: ()| {
+        methods.add_method_mut("delete", |_, this, ()| {
             this.index
                 .delete()
                 .map_err(|e| LuaError::RuntimeError(e.to_string()))?;
@@ -175,7 +183,7 @@ impl UserData for FileIndexLua {
                     .map_err(|e| mlua::Error::RuntimeError(e.to_string()))
             },
         );
-        methods.add_method("__tostring", |_, this: &FileIndexLua, _: ()| {
+        methods.add_method("__tostring", |_, this: &FileIndexLua, ()| {
             Ok(format!("{}", this.index))
         });
     }
@@ -185,14 +193,16 @@ impl UserData for FileIndexLua {
 ///
 /// Provides methods: `delete()`, `delete_documents(doc_ids)`, `update_documents(docs)`,
 /// `add_documents(docs)`, `search(query, opts)`, and `__tostring`.
+#[cfg(any(feature = "module", test))]
 #[derive(Debug, Clone)]
 struct GenericIndexLua {
     index: GenericIndex,
 }
 
+#[cfg(any(feature = "module", test))]
 impl UserData for GenericIndexLua {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method_mut("delete", |_, this, _: ()| {
+        methods.add_method_mut("delete", |_, this, ()| {
             this.index
                 .delete()
                 .map_err(|e| LuaError::RuntimeError(e.to_string()))?;
@@ -238,13 +248,14 @@ impl UserData for GenericIndexLua {
                 Ok(results)
             },
         );
-        methods.add_method("__tostring", |_, this: &GenericIndexLua, _: ()| {
+        methods.add_method("__tostring", |_, this: &GenericIndexLua, ()| {
             Ok(format!("{:?}", this.index))
         });
     }
 }
 
 /// Creates a Lua table with version metadata from Cargo environment variables.
+#[cfg(any(feature = "module", test))]
 fn make_version_tbl(lua: &Lua) -> LuaResult<LuaTable> {
     let tbl = lua.create_table()?;
 
@@ -271,7 +282,7 @@ mod tests {
         let lua = Lua::new();
         let tbl = make_version_tbl(&lua).unwrap();
         let major: String = tbl.get("major").unwrap();
-        assert!(!major.is_empty());
+        assert_ne!(major, "");
     }
 
     #[test]
@@ -400,7 +411,7 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let opts = FileIndexOptions::default();
         let index = FileIndex::get_or_create(tmp.path(), Some(tmp.path()), &opts).unwrap();
-        let s = format!("{}", index);
+        let s = format!("{index}");
         assert!(s.contains("Index("));
     }
 

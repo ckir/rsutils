@@ -23,6 +23,7 @@ fmt:
 lint:
     bash scripts/check-members.sh
     cargo clippy --workspace --all-targets --locked -- -D warnings
+    cargo clippy -p pore-lua --no-default-features --features lua55,module --locked -- -D warnings
 
 test:
     cargo nextest run --workspace --locked
