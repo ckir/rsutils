@@ -33,29 +33,27 @@ use mlua::LuaSerdeExt;
 use mlua::prelude::*;
 #[cfg(any(feature = "module", test))]
 use mlua::{UserData, UserDataMethods};
-#[cfg(feature = "module")]
+#[cfg(any(feature = "module", test))]
 use pore_core::FileIndexOptionsShape;
 #[cfg(any(feature = "module", test))]
 use pore_core::{
     FileIndex, FileSearchOptionsShape, GenericIndex, IndexOptionsShape, SearchOptionsShape,
 };
-#[cfg(feature = "module")]
+#[cfg(any(feature = "module", test))]
 use std::path::PathBuf;
-#[cfg(feature = "module")]
+#[cfg(any(feature = "module", test))]
 use std::str::FromStr;
 #[cfg(any(feature = "module", test))]
 use tantivy::query::QueryParser;
 
-/// Entry point for the Lua module. Called when the shared library is loaded via
-/// `require("pore_lua")`.
+/// Builds the table the Lua module returns.
 ///
 /// Returns a Lua table with the following keys:
 /// - `version` — a table with `full`, `major`, `minor`, `patch`, `pre` fields.
 /// - `get_file_index(for_dir, cache_dir, config)` — creates or opens a [`FileIndex`].
 /// - `get_index(id_field, text_fields, config, cache_dir)` — creates or opens a [`GenericIndex`].
-#[cfg(feature = "module")]
-#[mlua::lua_module]
-fn pore_lua(lua: &Lua) -> LuaResult<LuaTable> {
+#[cfg(any(feature = "module", test))]
+fn exports(lua: &Lua) -> LuaResult<LuaTable> {
     let exports = lua.create_table()?;
 
     exports.set("version", make_version_tbl(lua)?)?;
@@ -109,6 +107,13 @@ fn pore_lua(lua: &Lua) -> LuaResult<LuaTable> {
     exports.set("get_index", get_index)?;
 
     Ok(exports)
+}
+
+/// Entry point called by `require("pore_lua")`.
+#[cfg(feature = "module")]
+#[mlua::lua_module]
+fn pore_lua(lua: &Lua) -> LuaResult<LuaTable> {
+    exports(lua)
 }
 
 /// Sets a key in a Lua table if the corresponding environment variable is non-empty.
@@ -477,5 +482,43 @@ mod tests {
         let lua = Lua::new();
         let opts: SearchOptionsShape = lua.load("{ limit = 10 }").eval().unwrap();
         assert_eq!(opts.limit, Some(10));
+    }
+
+    #[test]
+    fn module_exports_work_from_lua() {
+        let dir = TempDir::new().unwrap();
+        let cache = TempDir::new().unwrap();
+        let cache2 = TempDir::new().unwrap();
+        fs::write(dir.path().join("a.txt"), "hello world from pore").unwrap();
+
+        let lua = Lua::new();
+        lua.globals().set("pore", exports(&lua).unwrap()).unwrap();
+        lua.globals()
+            .set("dir", dir.path().to_str().unwrap())
+            .unwrap();
+        lua.globals()
+            .set("cache", cache.path().to_str().unwrap())
+            .unwrap();
+        lua.globals()
+            .set("cache2", cache2.path().to_str().unwrap())
+            .unwrap();
+        lua.load(
+            r#"
+            assert(type(pore.version.full) == "string" and #pore.version.full > 0,
+                "version.full must be a non-empty string")
+
+            local fidx = pore.get_file_index(dir, cache, {})
+            fidx:update()
+            local fres = fidx:search("pore", {})
+            assert(#fres == 1, "file index: expected exactly one result, got " .. #fres)
+
+            local gidx = pore.get_index("id", {"title", "body"}, {}, cache2)
+            gidx:add_documents({{id = "1", title = "Hello", body = "world"}})
+            local gres = gidx:search("hello", {})
+            assert(#gres == 1, "generic index: expected exactly one result, got " .. #gres)
+        "#,
+        )
+        .exec()
+        .unwrap();
     }
 }
