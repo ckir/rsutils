@@ -6,8 +6,9 @@ use std::collections::HashMap;
 
 #[test]
 fn add_and_search_documents() {
+    use tantivy::query::QueryParser;
     let (_tmp, mut index) =
-        create_test_generic_index("id", &["title", "body"], IndexOptions::default());
+        create_test_generic_index("id", &["title", "body"], &IndexOptions::default());
 
     let mut doc1 = HashMap::new();
     doc1.insert("id".to_string(), "1".to_string());
@@ -21,7 +22,6 @@ fn add_and_search_documents() {
 
     index.add_documents(vec![doc1, doc2]).unwrap();
 
-    use tantivy::query::QueryParser;
     let query_parser = QueryParser::for_index(index.index(), index.get_text_fields());
     let query = query_parser.parse_query("Hello").unwrap();
     let results = index.search(&query, &SearchOptions::default()).unwrap();
@@ -31,7 +31,8 @@ fn add_and_search_documents() {
 
 #[test]
 fn delete_documents_by_id() {
-    let (_tmp, mut index) = create_test_generic_index("id", &["text"], IndexOptions::default());
+    use tantivy::query::QueryParser;
+    let (_tmp, mut index) = create_test_generic_index("id", &["text"], &IndexOptions::default());
 
     let mut doc = HashMap::new();
     doc.insert("id".to_string(), "1".to_string());
@@ -40,7 +41,6 @@ fn delete_documents_by_id() {
 
     index.delete_documents(vec!["1".to_string()]).unwrap();
 
-    use tantivy::query::QueryParser;
     let query_parser = QueryParser::for_index(index.index(), index.get_text_fields());
     let query = query_parser.parse_query("hello").unwrap();
     let results = index.search(&query, &SearchOptions::default()).unwrap();
@@ -49,7 +49,8 @@ fn delete_documents_by_id() {
 
 #[test]
 fn update_documents_replaces_fields() {
-    let (_tmp, mut index) = create_test_generic_index("id", &["text"], IndexOptions::default());
+    use tantivy::query::QueryParser;
+    let (_tmp, mut index) = create_test_generic_index("id", &["text"], &IndexOptions::default());
 
     let mut doc = HashMap::new();
     doc.insert("id".to_string(), "1".to_string());
@@ -61,7 +62,6 @@ fn update_documents_replaces_fields() {
     updated.insert("text".to_string(), "updated content".to_string());
     index.update_documents(vec![updated]).unwrap();
 
-    use tantivy::query::QueryParser;
     let query_parser = QueryParser::for_index(index.index(), index.get_text_fields());
     let query = query_parser.parse_query("original").unwrap();
     let results = index.search(&query, &SearchOptions::default()).unwrap();
@@ -74,7 +74,7 @@ fn update_documents_replaces_fields() {
 
 #[test]
 fn delete_nonexistent_id_is_noop() {
-    let (_tmp, mut index) = create_test_generic_index("id", &["text"], IndexOptions::default());
+    let (_tmp, mut index) = create_test_generic_index("id", &["text"], &IndexOptions::default());
     index
         .delete_documents(vec!["nonexistent".to_string()])
         .unwrap();
@@ -82,8 +82,8 @@ fn delete_nonexistent_id_is_noop() {
 
 #[test]
 fn empty_index_returns_no_results() {
-    let (_tmp, index) = create_test_generic_index("id", &["text"], IndexOptions::default());
     use tantivy::query::QueryParser;
+    let (_tmp, index) = create_test_generic_index("id", &["text"], &IndexOptions::default());
     let query_parser = QueryParser::for_index(index.index(), index.get_text_fields());
     let query = query_parser.parse_query("anything").unwrap();
     let results = index.search(&query, &SearchOptions::default()).unwrap();
@@ -92,12 +92,12 @@ fn empty_index_returns_no_results() {
 
 #[test]
 fn search_with_limit() {
-    let (_tmp, mut index) = create_test_generic_index("id", &["text"], IndexOptions::default());
+    let (_tmp, mut index) = create_test_generic_index("id", &["text"], &IndexOptions::default());
 
     for i in 0..5 {
         let mut doc = HashMap::new();
         doc.insert("id".to_string(), i.to_string());
-        doc.insert("text".to_string(), format!("test document number {}", i));
+        doc.insert("text".to_string(), format!("test document number {i}"));
         index.add_documents(vec![doc]).unwrap();
     }
 
@@ -114,7 +114,7 @@ fn search_with_limit() {
 
 #[test]
 fn search_with_threshold() {
-    let (_tmp, mut index) = create_test_generic_index("id", &["text"], IndexOptions::default());
+    let (_tmp, mut index) = create_test_generic_index("id", &["text"], &IndexOptions::default());
 
     let mut doc = HashMap::new();
     doc.insert("id".to_string(), "1".to_string());
@@ -134,7 +134,7 @@ fn search_with_threshold() {
 
 #[test]
 fn test_regex_query() {
-    let (_tmp, mut index) = create_test_generic_index("id", &["body"], IndexOptions::default());
+    let (_tmp, mut index) = create_test_generic_index("id", &["body"], &IndexOptions::default());
 
     let mut doc = std::collections::HashMap::new();
     doc.insert("id".to_string(), "1".to_string());

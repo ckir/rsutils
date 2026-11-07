@@ -4,7 +4,10 @@ use std::fs;
 use std::path::Path;
 use tempfile::TempDir;
 
-/// Create test files in a directory with given (relative_path, content) pairs.
+/// Create test files in a directory with given `(relative_path, content)` pairs.
+///
+/// # Panics
+/// Panics if a file cannot be written.
 pub fn create_test_files(dir: &Path, files: &[(&str, &str)]) {
     for (rel_path, content) in files {
         let full_path = dir.join(rel_path);
@@ -15,31 +18,42 @@ pub fn create_test_files(dir: &Path, files: &[(&str, &str)]) {
     }
 }
 
-/// Create a FileIndex for a test directory with the given options.
+/// Create a `FileIndex` for a test directory with the given options.
+///
+/// # Panics
+/// Panics if the temporary directory or the index cannot be created.
+#[must_use]
 pub fn create_test_file_index(
     files: &[(&str, &str)],
-    opts: FileIndexOptions,
+    opts: &FileIndexOptions,
 ) -> (TempDir, FileIndex) {
     let tmp = TempDir::new().unwrap();
     create_test_files(tmp.path(), files);
-    let index = FileIndex::get_or_create(tmp.path(), Some(tmp.path()), &opts).unwrap();
+    let index = FileIndex::get_or_create(tmp.path(), Some(tmp.path()), opts).unwrap();
     (tmp, index)
 }
 
-/// Create a GenericIndex for testing.
+/// Create a `GenericIndex` for testing.
+///
+/// # Panics
+/// Panics if the temporary directory or the index cannot be created.
+#[must_use]
 pub fn create_test_generic_index(
     id_field: &str,
     text_fields: &[&str],
-    opts: IndexOptions,
+    opts: &IndexOptions,
 ) -> (TempDir, GenericIndex) {
     let tmp = TempDir::new().unwrap();
-    let index =
-        GenericIndex::get_or_create(id_field, text_fields.to_vec(), &opts, Some(tmp.path()))
-            .unwrap();
+    let index = GenericIndex::get_or_create(id_field, text_fields.to_vec(), opts, Some(tmp.path()))
+        .unwrap();
     (tmp, index)
 }
 
-/// Parse a query string and run search on a FileIndex, returning results.
+/// Parse a query string and run search on a `FileIndex`, returning results.
+///
+/// # Panics
+/// Panics if the query cannot be parsed or the search fails.
+#[must_use]
 pub fn search_file_index(
     index: &FileIndex,
     query_str: &str,

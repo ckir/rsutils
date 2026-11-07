@@ -6,26 +6,26 @@
 //! accept documents from either Rust code or Lua scripts without needing
 //! separate indexing paths.
 
-use std::{borrow::Cow, collections::HashMap};
+use std::{borrow::Cow, collections::HashMap, hash::BuildHasher};
 
 /// Extracts a named text field from a data source.
 ///
 /// Implementations return [`Cow::Borrowed`] when the backing store can provide
 /// a reference (e.g., `HashMap`), and [`Cow::Owned`] when a conversion is
 /// required (e.g., Lua table → Rust string).
-///
-/// # Errors
-/// Returns an error if the field is missing or not a string.
 pub trait FieldMap {
     /// Returns the value of the field with the given key.
+    ///
+    /// # Errors
+    /// Returns an error if the field is missing or not a string.
     fn get_field(&self, key: &str) -> anyhow::Result<Cow<'_, str>>;
 }
 
-impl FieldMap for HashMap<String, String> {
+impl<S: BuildHasher> FieldMap for HashMap<String, String, S> {
     fn get_field(&self, key: &str) -> anyhow::Result<Cow<'_, str>> {
         self.get(key)
             .map(|s| Cow::Borrowed(s.as_str()))
-            .ok_or_else(|| anyhow!("Missing field {}", key))
+            .ok_or_else(|| anyhow!("Missing field {key}"))
     }
 }
 
@@ -33,7 +33,7 @@ impl FieldMap for mlua::Table {
     fn get_field(&self, key: &str) -> anyhow::Result<Cow<'_, str>> {
         self.get::<String>(key)
             .map(Cow::Owned)
-            .map_err(|e| anyhow!("{}", e))
+            .map_err(|e| anyhow!("{e}"))
     }
 }
 

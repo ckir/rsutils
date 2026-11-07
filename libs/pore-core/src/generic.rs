@@ -20,20 +20,20 @@ use serde::Serialize;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
+use tantivy::ReloadPolicy;
 use tantivy::collector::TopDocs;
 use tantivy::doc;
 use tantivy::query::Query;
-use tantivy::ReloadPolicy;
 
-use tantivy::schema::*;
 use tantivy::Index;
+use tantivy::schema::{Field, Term, Value};
 
-use crate::common::create_index;
-use crate::common::delete_index;
 use crate::common::IndexMetadata;
+use crate::common::METADATA_FILE;
 use crate::common::Metadata;
 use crate::common::MetadataConfig;
-use crate::common::METADATA_FILE;
+use crate::common::create_index;
+use crate::common::delete_index;
 use crate::field_map::FieldMap;
 use crate::language::LanguageRef;
 
@@ -112,15 +112,27 @@ impl IntoLua for SearchResult {
 
 impl GenericIndex {
     /// Returns a reference to the underlying Tantivy index.
+    #[must_use]
     pub fn index(&self) -> &Index {
         &self.index
     }
     /// Deletes the index and its on-disk cache (if any).
+    ///
+    /// # Errors
+    /// Returns an error if the index writer cannot be created or the deletion cannot be
+    /// committed.
     pub fn delete(&self) -> anyhow::Result<bool> {
         delete_index(&self.index, self.cache_dir.as_deref())
     }
 
     /// Opens an existing index or creates a new one.
+    ///
+    /// # Errors
+    /// Returns an error if the index cannot be created or opened (including failures
+    /// creating the cache directory or deleting a corrupted index's files).
+    ///
+    /// # Panics
+    /// Panics if `cache_dir` is given but cannot be canonicalized.
     ///
     /// # Parameters
     /// * `id_field` — name of the stored document identifier field.
@@ -159,6 +171,7 @@ impl GenericIndex {
     }
 
     /// Returns all text (non-stored) fields in the schema.
+    #[must_use]
     pub fn get_text_fields(&self) -> Vec<Field> {
         let mut ret = Vec::new();
         let id_field = self.get_id_field().ok();
@@ -171,6 +184,10 @@ impl GenericIndex {
     }
 
     /// Deletes documents with the given IDs from the index.
+    ///
+    /// # Errors
+    /// Returns an error if the schema has no stored ID field, or if the index writer cannot
+    /// be created or the deletion cannot be committed.
     pub fn delete_documents<I, T>(&mut self, document_ids: I) -> anyhow::Result<()>
     where
         I: IntoIterator<Item = T>,
@@ -189,6 +206,13 @@ impl GenericIndex {
     ///
     /// Documents are deleted by ID and then re-added. Each document must
     /// provide its ID via the [`FieldMap`](crate::field_map::FieldMap) trait.
+    ///
+    /// # Errors
+    /// Returns an error if the schema has no stored ID field, or if deleting the old
+    /// documents or adding the new ones fails.
+    ///
+    /// # Panics
+    /// Panics if a document does not provide its ID field.
     pub fn update_documents<T: FieldMap>(&mut self, documents: Vec<T>) -> anyhow::Result<()> {
         let id_field = self.get_id_field()?;
         let schema = self.index.schema();
@@ -206,6 +230,10 @@ impl GenericIndex {
     /// Each document must implement [`FieldMap`](crate::field_map::FieldMap) to
     /// provide values for all schema fields. The last-update timestamp and
     /// on-disk metadata file are updated after a successful commit.
+    ///
+    /// # Errors
+    /// Returns an error if a document lacks a value for a schema field, or if the index
+    /// writer fails to add or commit documents, or the metadata file cannot be written.
     pub fn add_documents<T: FieldMap>(&mut self, documents: Vec<T>) -> anyhow::Result<()> {
         let mut index_writer = self.index.writer::<tantivy::TantivyDocument>(50_000_000)?;
         let now = Utc::now();
@@ -231,6 +259,13 @@ impl GenericIndex {
     /// Executes a search query against the index.
     ///
     /// Returns results sorted by score, limited by [`SearchOptions::limit`].
+    ///
+    /// # Errors
+    /// Returns an error if the schema has no stored ID field, or if the index reader
+    /// cannot be opened or the search fails.
+    ///
+    /// # Panics
+    /// Panics if a matched document has no string ID value.
     pub fn search(
         &self,
         query: &dyn Query,

@@ -12,11 +12,11 @@
 //! - [`FileMetadata`] — persisted metadata about when and how the index was built.
 //! - [`FileSearchResult`] and [`Line`] — search result structures.
 
+use crate::common::IndexMetadata;
+use crate::common::METADATA_FILE;
+use crate::common::MetadataConfig;
 use crate::common::create_index;
 use crate::common::delete_index;
-use crate::common::IndexMetadata;
-use crate::common::MetadataConfig;
-use crate::common::METADATA_FILE;
 use crate::language::LanguageRef;
 use crate::location;
 use crate::location::DocResult;
@@ -24,9 +24,9 @@ use crate::location::DocResult;
 use chrono::DateTime;
 use chrono::Local;
 use chrono::Utc;
-use ignore::overrides::OverrideBuilder;
 use ignore::WalkBuilder;
 use ignore::WalkState;
+use ignore::overrides::OverrideBuilder;
 use macros::create_option_copy;
 use mlua::IntoLua;
 use serde::{Deserialize, Serialize};
@@ -35,15 +35,15 @@ use std::fmt::Display;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
+use tantivy::ReloadPolicy;
 use tantivy::doc;
 use tantivy::query::Query;
-use tantivy::ReloadPolicy;
 
-use tantivy::schema::*;
 use tantivy::Index;
 
-use tantivy::schema::{Document, Field, OwnedValue};
+use tantivy::schema::{Document, Field, OwnedValue, Value};
 
+#[derive(Debug)]
 pub struct PoreFileEntry {
     filepath_field: Field,
     filepath_value: OwnedValue,
@@ -94,6 +94,8 @@ pub struct FileIndex {
 /// copy-conversion functions for Lua interop.
 #[create_option_copy(FileIndexOptionsShape)]
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
+// reason: the options are independent user-facing flags that mirror the CLI and Lua API; grouping them would change the serialized shape
+#[allow(clippy::struct_excessive_bools)]
 pub struct FileIndexOptions {
     /// Whether to follow symbolic links during file walking.
     pub follow: bool,
@@ -185,6 +187,11 @@ impl FileMetadata {
     /// Creates new metadata for the given directory.
     ///
     /// The path is canonicalized to an absolute path.
+    ///
+    /// # Errors
+    /// Returns an error if a relative `for_dir` cannot be resolved because the current
+    /// directory is unavailable, or if canonicalizing the path fails (for example because
+    /// it does not exist).
     pub fn new<P: AsRef<Path>>(
         config: FileIndexOptions,
         for_dir: P,
@@ -242,7 +249,8 @@ pub struct FileSearchResult {
 }
 
 impl FileSearchResult {
-    /// Creates a new FileSearchResult carrying matching lines.
+    /// Creates a new `FileSearchResult` carrying matching lines.
+    #[must_use]
     pub fn new(file: PathBuf, score: f32, lines: Vec<Line>) -> Self {
         Self {
             file,
@@ -252,7 +260,8 @@ impl FileSearchResult {
         }
     }
 
-    /// Creates a new FileSearchResult carrying Tantivy snippets instead of lines.
+    /// Creates a new `FileSearchResult` carrying Tantivy snippets instead of lines.
+    #[must_use]
     pub fn with_snippets(file: PathBuf, score: f32, snippets: Vec<String>) -> Self {
         Self {
             file,
@@ -263,18 +272,22 @@ impl FileSearchResult {
     }
 
     /// Returns the path to the matched file.
+    #[must_use]
     pub fn file(&self) -> &Path {
         &self.file
     }
     /// Returns the relevance score.
+    #[must_use]
     pub fn score(&self) -> f32 {
         self.score
     }
     /// Returns the matching lines in the file (may be empty).
+    #[must_use]
     pub fn lines(&self) -> &Vec<Line> {
         &self.lines
     }
     /// Returns the matching snippets in the file (empty unless snippets were requested).
+    #[must_use]
     pub fn snippets(&self) -> &Vec<String> {
         &self.snippets
     }
@@ -297,6 +310,7 @@ impl IntoLua for FileSearchResult {
 
 impl FileMetadata {
     /// Returns the directory that was indexed.
+    #[must_use]
     pub fn for_dir(&self) -> &Path {
         &self.for_dir
     }
@@ -319,21 +333,29 @@ impl IndexMetadata<FileIndexOptions> for FileMetadata {
 
 impl FileIndex {
     /// Returns a reference to the underlying Tantivy index.
+    #[must_use]
     pub fn index(&self) -> &Index {
         &self.index
     }
     /// Returns the schema field for file paths.
+    #[must_use]
     pub fn filepath(&self) -> &Field {
         &self.filepath
     }
     /// Returns the schema field for file contents.
+    #[must_use]
     pub fn contents(&self) -> &Field {
         &self.contents
     }
+    #[must_use]
     pub fn ext(&self) -> &Field {
         &self.ext
     }
     /// Deletes the index and its on-disk cache (if any).
+    ///
+    /// # Errors
+    /// Returns an error if the index writer cannot be created or the deletion cannot be
+    /// committed.
     pub fn delete(&self) -> anyhow::Result<bool> {
         delete_index(&self.index, self.cache_dir.as_deref())
     }
@@ -341,6 +363,15 @@ impl FileIndex {
     ///
     /// If a persisted index exists at `cache_dir` with a matching config, it is
     /// reused. Otherwise a fresh index is created.
+    ///
+    /// # Errors
+    /// Returns an error if the index cannot be created or opened (including failures
+    /// creating the cache directory or deleting a corrupted index's files).
+    ///
+    /// # Panics
+    /// Panics if the schema lacks the `filepath`, `contents`, `modified` or `ext` fields,
+    /// if `cache_dir` cannot be canonicalized, or if fresh metadata cannot be created for
+    /// `for_dir` (for example because it does not exist).
     ///
     /// # Parameters
     /// * `for_dir` — the directory to index.
@@ -390,6 +421,9 @@ impl FileIndex {
     ///
     /// The walker respects the index's `.gitignore`, hidden file, glob, and
     /// symlink-following settings.
+    ///
+    /// # Errors
+    /// Returns an error if a configured include or exclude glob pattern is invalid.
     pub fn get_file_walker(&self) -> Result<WalkBuilder, anyhow::Error> {
         let mut builder = WalkBuilder::new(&self.meta.for_dir);
         builder
@@ -416,7 +450,7 @@ impl FileIndex {
             }
             let matcher = globs.build()?;
             builder.filter_entry(move |e| {
-                if e.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
+                if e.file_type().is_some_and(|ft| ft.is_dir()) {
                     true
                 } else {
                     matcher.matched(e.path(), false).is_whitelist()
@@ -431,36 +465,46 @@ impl FileIndex {
     /// If `rebuild` is true, all readable files are re-indexed regardless of
     /// their modification time. Otherwise, only files modified since the last
     /// update are added.
+    ///
+    /// # Errors
+    /// Returns an error if the directory walker cannot be configured, or if committing
+    /// the index or writing the metadata file fails.
+    ///
+    /// # Panics
+    /// Panics if a walked entry's filesystem metadata or modification time cannot be read,
+    /// or if an entry's path is not under the indexed directory.
     pub fn update(&mut self, rebuild: bool) -> Result<&mut Self, anyhow::Error> {
         let mut index_writer = self.index.writer::<PoreFileEntry>(50_000_000)?;
         let walker = self.get_file_walker()?;
         let now = Utc::now();
         walker.build_parallel().run(|| {
             Box::new(|result| {
-                if let Ok(entry) = result {
-                    if let Ok(contents) = fs::read_to_string(entry.path()) {
-                        let modified: DateTime<Utc> =
-                            entry.metadata().unwrap().modified().unwrap().into();
-                        if rebuild || modified > self.meta.last_update {
-                            let filepath = entry.path().strip_prefix(&self.meta.for_dir).unwrap();
-                            let filepath_str = filepath.to_string_lossy().into_owned();
-                            let ext_str = filepath
-                                .extension()
-                                .unwrap_or_default()
-                                .to_string_lossy()
-                                .into_owned();
-                            let doc = PoreFileEntry {
-                                filepath_field: self.filepath,
-                                filepath_value: OwnedValue::Str(filepath_str),
-                                contents_field: self.contents,
-                                contents_value: OwnedValue::Str(contents),
-                                modified_field: self.modified,
-                                modified_value: OwnedValue::U64(modified.timestamp_millis() as u64),
-                                ext_field: self.ext,
-                                ext_value: OwnedValue::Str(ext_str),
-                            };
-                            let _ = index_writer.add_document(doc);
-                        }
+                if let Ok(entry) = result
+                    && let Ok(contents) = fs::read_to_string(entry.path())
+                {
+                    let modified: DateTime<Utc> =
+                        entry.metadata().unwrap().modified().unwrap().into();
+                    if rebuild || modified > self.meta.last_update {
+                        let filepath = entry.path().strip_prefix(&self.meta.for_dir).unwrap();
+                        let filepath_str = filepath.to_string_lossy().into_owned();
+                        let ext_str = filepath
+                            .extension()
+                            .unwrap_or_default()
+                            .to_string_lossy()
+                            .into_owned();
+                        let doc = PoreFileEntry {
+                            filepath_field: self.filepath,
+                            filepath_value: OwnedValue::Str(filepath_str),
+                            contents_field: self.contents,
+                            contents_value: OwnedValue::Str(contents),
+                            modified_field: self.modified,
+                            modified_value: OwnedValue::U64(
+                                modified.timestamp_millis().cast_unsigned(),
+                            ),
+                            ext_field: self.ext,
+                            ext_value: OwnedValue::Str(ext_str),
+                        };
+                        let _ = index_writer.add_document(doc);
                     }
                 }
                 WalkState::Continue
@@ -496,7 +540,9 @@ impl FileIndex {
     ) -> Result<serde_json::Value, anyhow::Error> {
         use tantivy::aggregation::agg_req::{Aggregation, AggregationVariants, Aggregations};
         use tantivy::aggregation::bucket::TermsAggregation;
-        use tantivy::aggregation::{AggContextParams, AggregationCollector};
+        use tantivy::aggregation::{
+            AggContextParams, AggregationCollector, AggregationLimitsGuard,
+        };
 
         let field_name = opts
             .aggregate
@@ -530,7 +576,10 @@ impl FileIndex {
         let searcher = self.index.reader()?.searcher();
         let collector = AggregationCollector::from_aggs(
             aggs,
-            AggContextParams::new(Default::default(), self.index.tokenizers().clone()),
+            AggContextParams::new(
+                AggregationLimitsGuard::default(),
+                self.index.tokenizers().clone(),
+            ),
         );
         Ok(serde_json::to_value(searcher.search(query, &collector)?)?)
     }
@@ -539,6 +588,16 @@ impl FileIndex {
     ///
     /// Returns results sorted by relevance, limited by [`FileSearchOptions::limit`],
     /// with matching line numbers and text when `filename_only` is false.
+    ///
+    /// # Errors
+    /// Returns an error if the index reader cannot be opened, the search fails, a
+    /// snippet generator cannot be created, or reading a matched file to resolve line
+    /// positions fails.
+    ///
+    /// # Panics
+    /// Panics if a matched document has no string `filepath` field.
+    // reason: one linear dispatch over the sort modes with a shared result builder; splitting would scatter the closure's captures
+    #[allow(clippy::too_many_lines)]
     pub fn search(
         &self,
         query: &dyn Query,
@@ -663,10 +722,14 @@ impl FileIndex {
 
 impl Display for FileIndex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Index({:?})", self.meta.for_dir)?;
+        write!(f, "Index(")?;
+        std::fmt::Debug::fmt(&self.meta.for_dir, f)?;
+        writeln!(f, ")")?;
         writeln!(f, "  version: {}", self.meta.version)?;
         if let Some(index_dir) = &self.cache_dir {
-            writeln!(f, "  location: {:?}", index_dir)?;
+            write!(f, "  location: ")?;
+            std::fmt::Debug::fmt(index_dir, f)?;
+            writeln!(f)?;
             writeln!(
                 f,
                 "  last updated: {}",
@@ -676,8 +739,8 @@ impl Display for FileIndex {
             writeln!(f, "  location: in-memory")?;
         }
         for field in serde_json::to_string_pretty(&self.meta.config)
-            .unwrap_or("".to_string())
-            .split("\n")
+            .unwrap_or_default()
+            .split('\n')
         {
             writeln!(f, "  {}", field.replace(" =", ":"))?;
         }
@@ -734,7 +797,7 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let opts = FileIndexOptions::default();
         let index = FileIndex::get_or_create(tmp.path(), Some(tmp.path()), &opts).unwrap();
-        let display = format!("{}", index);
+        let display = format!("{index}");
         assert!(display.contains("Index("));
         assert!(display.contains("version:"));
         assert!(display.contains("location:"));

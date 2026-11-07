@@ -16,7 +16,7 @@ use tantivy::tokenizer::Language;
 /// A supported stemming language.
 ///
 /// Each variant maps 1:1 to a Tantivy [`Language`]. Serde serializes these to
-/// snake_case (e.g., `LanguageRef::English` → `"english"`), and [`FromStr`]
+/// `snake_case` (e.g., `LanguageRef::English` → `"english"`), and [`FromStr`]
 /// parsing is case-insensitive.
 #[derive(Debug, Deserialize, Serialize, Copy, Clone, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -119,7 +119,7 @@ impl FromStr for LanguageRef {
             "swedish" => Ok(LanguageRef::Swedish),
             "tamil" => Ok(LanguageRef::Tamil),
             "turkish" => Ok(LanguageRef::Turkish),
-            _ => Err(anyhow!("Invalid language value '{}'", s)),
+            _ => Err(anyhow!("Invalid language value '{s}'")),
         }
     }
 }

@@ -20,8 +20,8 @@ use std::{
 };
 
 use tantivy::{
-    postings::Postings, query::Query, schema::IndexRecordOption, DocAddress, DocSet, Searcher,
-    TERMINATED,
+    DocAddress, DocSet, Searcher, TERMINATED, postings::Postings, query::Query,
+    schema::IndexRecordOption,
 };
 
 use crate::{FileIndex, Line};
@@ -79,7 +79,7 @@ pub fn get_search_results(
                     }
 
                     if let Some(position_data) = position_map.get_mut(&DocAddress {
-                        segment_ord: segment_ord as u32,
+                        segment_ord: u32::try_from(segment_ord)?,
                         doc_id,
                     }) {
                         segment_postings.positions(&mut positions);
@@ -138,7 +138,7 @@ pub fn positions_to_lines(
                     match positions.pop() {
                         None => break 'outer,
                         Some(Reverse(pos)) => next_pos = pos,
-                    };
+                    }
                 }
             }
             num_tokens += line_tokens;
@@ -157,7 +157,7 @@ mod tests {
 
     /// Simplified positions-to-lines helper that reads all lines from a file.
     /// Tests the line-counting and file-reading logic without requiring a
-    /// FileIndex (position-to-line mapping needs the index's tokenizer).
+    /// `FileIndex` (position-to-line mapping needs the index's tokenizer).
     fn positions_to_lines_no_index(
         filepath: &Path,
         positions: &mut BytePositions,

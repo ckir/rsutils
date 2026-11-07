@@ -3,11 +3,18 @@ use quote::quote;
 use syn::punctuated::Punctuated;
 use syn::token::Colon2;
 use syn::{
-    parse_macro_input, AngleBracketedGenericArguments, Data, DeriveInput, GenericArgument, Path,
-    PathArguments, PathSegment, Type, TypePath, VisPublic, Visibility,
+    AngleBracketedGenericArguments, Data, DeriveInput, GenericArgument, Path, PathArguments,
+    PathSegment, Type, TypePath, VisPublic, Visibility, parse_macro_input,
 };
 use syn::{Fields, Token};
 
+/// Derives an all-`Option` copy of a named-field struct, plus merge helpers and conversions.
+///
+/// # Panics
+/// Panics (a compile error at the use site) if the attribute argument is not a single
+/// identifier, if the item is not a struct, or if the struct has unit or unnamed fields.
+// reason: a single linear token-building function; splitting the quote! body would hurt clarity
+#[allow(clippy::too_many_lines)]
 #[proc_macro_attribute]
 pub fn create_option_copy(
     attr: proc_macro::TokenStream,
@@ -25,7 +32,7 @@ pub fn create_option_copy(
             match &mut new_struct.data {
                 Data::Struct(source) => match &mut source.fields {
                     Fields::Named(fields) => {
-                        for field in fields.named.iter_mut() {
+                        for field in &mut fields.named {
                             field_names.push(field.ident.clone().unwrap());
                             field.vis = Visibility::Public(VisPublic {
                                 pub_token: Token![pub](Span::call_site()),

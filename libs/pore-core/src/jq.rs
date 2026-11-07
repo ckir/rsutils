@@ -3,7 +3,7 @@
 //! Wraps [`jaq_core`] to provide a simple compile-then-run API for jq expressions.
 
 use jaq_core::load::{Arena, File, Loader};
-use jaq_core::{data, unwrap_valr, Compiler, Ctx, Vars};
+use jaq_core::{Compiler, Ctx, Vars, data, unwrap_valr};
 use jaq_json::Val;
 
 /// A compiled jq filter that can be run against JSON values.
@@ -11,8 +11,19 @@ pub struct JqEngine {
     filter: jaq_core::Filter<data::JustLut<Val>>,
 }
 
+impl std::fmt::Debug for JqEngine {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // The compiled filter holds native function pointers that cannot be printed.
+        f.debug_struct("JqEngine").finish_non_exhaustive()
+    }
+}
+
 impl JqEngine {
     /// Compile a jq filter string.
+    ///
+    /// # Errors
+    /// Returns an error if the filter fails to load (syntax error) or to compile
+    /// (for example an undefined function or variable).
     pub fn compile(filter_str: &str) -> Result<Self, anyhow::Error> {
         let program = File {
             code: filter_str,
@@ -25,21 +36,25 @@ impl JqEngine {
         let arena = Arena::default();
         let modules = loader
             .load(&arena, program)
-            .map_err(|errs| anyhow::anyhow!("jq load error: {:?}", errs))?;
+            .map_err(|errs| anyhow::anyhow!("jq load error: {errs:?}"))?;
 
         let filter = Compiler::default()
             .with_funs(funs)
             .compile(modules)
-            .map_err(|errs| anyhow::anyhow!("jq compile error: {:?}", errs))?;
+            .map_err(|errs| anyhow::anyhow!("jq compile error: {errs:?}"))?;
 
         Ok(Self { filter })
     }
 
     /// Run the compiled filter against a JSON value.
+    ///
+    /// # Errors
+    /// Returns an error if the input cannot be converted for jaq, if the filter raises a
+    /// runtime error, or if an output cannot be parsed back as JSON.
     pub fn run(&self, input: &serde_json::Value) -> Result<Vec<serde_json::Value>, anyhow::Error> {
         // Convert serde_json::Value to jaq_json::Val using serde feature
         let input_val: Val = serde_json::from_value(input.clone())
-            .map_err(|e| anyhow::anyhow!("failed to convert json to jaq: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("failed to convert json to jaq: {e}"))?;
 
         let ctx = Ctx::<data::JustLut<Val>>::new(&self.filter.lut, Vars::new([]));
         let out = self.filter.id.run((ctx, input_val)).map(unwrap_valr);
@@ -49,13 +64,11 @@ impl JqEngine {
             match output {
                 Ok(val) => {
                     let json_val: serde_json::Value = serde_json::from_str(&val.to_string())
-                        .map_err(|e| {
-                            anyhow::anyhow!("failed to parse jaq output as json: {}", e)
-                        })?;
+                        .map_err(|e| anyhow::anyhow!("failed to parse jaq output as json: {e}"))?;
                     results.push(json_val);
                 }
                 Err(e) => {
-                    return Err(anyhow::anyhow!("jq runtime error: {:?}", e));
+                    return Err(anyhow::anyhow!("jq runtime error: {e:?}"));
                 }
             }
         }
@@ -118,7 +131,7 @@ mod tests {
         let engine = JqEngine::compile("empty").unwrap();
         let input = json!(null);
         let results = engine.run(&input).unwrap();
-        assert!(results.is_empty());
+        assert_eq!(results, Vec::<serde_json::Value>::new());
     }
 
     #[test]

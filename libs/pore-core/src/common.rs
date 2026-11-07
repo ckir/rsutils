@@ -21,10 +21,14 @@ use std::fs;
 use std::path::Path;
 use tantivy::doc;
 
-use tantivy::directory::MmapDirectory;
-use tantivy::schema::*;
-use tantivy::tokenizer::*;
 use tantivy::Index;
+use tantivy::directory::MmapDirectory;
+use tantivy::schema::{
+    FAST, INDEXED, IndexRecordOption, STORED, STRING, Schema, TextFieldIndexing, TextOptions,
+};
+use tantivy::tokenizer::{
+    Language, LowerCaser, RemoveLongFilter, SimpleTokenizer, Stemmer, TextAnalyzer,
+};
 
 use crate::language::LanguageRef;
 
@@ -141,7 +145,7 @@ pub fn create_index<
 ) -> Result<(Option<T>, Index), anyhow::Error> {
     let mut ret_meta: Option<T> = None;
     let metafile = cache_dir.as_ref().map(|p| p.as_ref().join(METADATA_FILE));
-    if metafile.as_deref().map(|p| p.exists()).unwrap_or(false) {
+    if metafile.as_deref().is_some_and(Path::exists) {
         let meta_res = serde_json::from_str::<T>(&fs::read_to_string(metafile.unwrap())?);
         if let Ok(meta) = meta_res {
             // Only reuse existing metadata when the config hasn't changed.
@@ -154,7 +158,7 @@ pub fn create_index<
     let mut tokenizers: HashMap<String, TextAnalyzer> = HashMap::new();
     // Build (or reuse) a tokenizer for the configured language.
     let mut get_tokenizer = |lang: Language| {
-        let key = format!("stemmer_{:?}", lang);
+        let key = format!("stemmer_{lang:?}");
         if !tokenizers.contains_key(&key) {
             let tokenizer = TextAnalyzer::builder(SimpleTokenizer::default())
                 .filter(RemoveLongFilter::limit(40))
@@ -193,7 +197,7 @@ pub fn create_index<
             if index_res.is_err() {
                 eprintln!("Index is corrupted. Deleting index files");
                 for entry in fs::read_dir(&index_dir)?.flatten() {
-                    if entry.file_type().map(|ft| ft.is_file()).unwrap_or(false) {
+                    if entry.file_type().is_ok_and(|ft| ft.is_file()) {
                         fs::remove_file(entry.path())?;
                     }
                 }
