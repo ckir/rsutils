@@ -101,5 +101,17 @@ mod tests {
             resolve(&vars).unwrap(),
             PathBuf::from("/home").join(".config")
         );
+
+        // An empty HOME counts as unset too, so USERPROFILE is the fallback.
+        vars.remove("PORE_TEST_XDG");
+        vars.insert("HOME", "");
+        assert_eq!(
+            resolve(&vars).unwrap(),
+            PathBuf::from("/up").join(".config")
+        );
+
+        // With both empty there is nothing left to resolve from.
+        vars.insert("USERPROFILE", "");
+        assert!(resolve(&vars).is_err());
     }
 }

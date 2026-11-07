@@ -574,3 +574,54 @@ fn config_file_in_xdg_config_home_is_used() {
     assert_eq!(lines.len(), 1, "limit = 1 from the config file: {stdout}");
     serde_json::from_str::<serde_json::Value>(lines[0]).unwrap();
 }
+
+#[test]
+fn index_is_stored_under_pore_cache_dir() {
+    let cfg = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let cache = tempfile::tempdir().unwrap();
+    let project = tempfile::tempdir().unwrap();
+    fs::write(project.path().join("a.txt"), "the wolf").unwrap();
+
+    pore()
+        .env("XDG_CONFIG_HOME", cfg.path())
+        .env("HOME", home.path())
+        .env("XDG_CACHE_HOME", cache.path())
+        .arg("search")
+        .arg("wolf")
+        .arg(project.path())
+        .assert()
+        .success();
+
+    assert!(cache.path().join("pore").is_dir());
+    let entries: Vec<std::ffi::OsString> = fs::read_dir(cache.path())
+        .unwrap()
+        .map(|e| e.unwrap().file_name())
+        .collect();
+    assert_eq!(entries, vec![std::ffi::OsString::from("pore")]);
+}
+
+#[test]
+fn malformed_config_file_error_names_the_quoted_path() {
+    let cfg = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let cache = tempfile::tempdir().unwrap();
+    let project = tempfile::tempdir().unwrap();
+    fs::write(cfg.path().join("pore.toml"), "limit = = 1\n").unwrap();
+    fs::write(project.path().join("a.txt"), "the wolf").unwrap();
+
+    let expected = format!(
+        "Error: Error parsing config file {:?}: ",
+        cfg.path().join("pore.toml")
+    );
+    pore()
+        .env("XDG_CONFIG_HOME", cfg.path())
+        .env("HOME", home.path())
+        .env("XDG_CACHE_HOME", cache.path())
+        .arg("search")
+        .arg("wolf")
+        .arg(project.path())
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(expected));
+}
