@@ -6,7 +6,7 @@ Items are listed without dates. Open housekeeping items are tracked in
 - A first release: prebuilt binaries on GitHub Releases (see
   [RELEASING.md](RELEASING.md)).
 - More file utilities. The first one, `pore`, has landed (moved in from
-  ckir/pore); the workspace also holds the template app `hello` and the shared
+  ckir/pore); the workspace also holds the shared
   library `rsutils-core`.
 - Code signing for macOS and Windows binaries, so first runs no longer show a
   Gatekeeper or SmartScreen warning.

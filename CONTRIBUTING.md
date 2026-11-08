@@ -20,26 +20,7 @@ versions locally to get the same results.
 
 On Windows the recipes assume a POSIX shell. Use Git Bash or WSL.
 
-## Adding an app
-
-```
-just new <name>
-```
-
-This copies the template app `apps/hello` to `apps/<name>`, renames it, and
-removes the `dist = false` setting so the new app is distributable. The name
-must match `^[a-z][a-z0-9-]*$`, `apps/<name>` must not already exist, and the
-name (with `-` read as `_`) must not be a Rust keyword. `libs/<name>` must not
-exist either, and names that cargo or Windows reject (`test`, `build`, `deps`,
-`examples`, `incremental`, `con`, `prn`, `aux`, `nul`, `com1`..`com9`,
-`lpt1`..`lpt9`) are refused.
-
-After `just new <name>`:
-
-- edit `description` in the new `Cargo.toml`, and the doc comment and the
-  greeting in `src/main.rs`;
-- commit the resulting `Cargo.lock` change (the new crate is added to the
-  lock, and `just check` runs with `--locked`).
+## Installing apps
 
 `just install [name]` installs one app, or every app except those marked
 `dist = false`.
@@ -57,8 +38,7 @@ This prints the tool versions used, then runs six gates in order:
    `-D warnings`, then a third step that lints the Lua module build, which no
    default build compiles:
    `cargo clippy -p pore-lua --no-default-features --features lua55,module --locked -- -D warnings`.
-3. `test`: `cargo nextest`, doc tests, and `scripts/test-new.sh` (which tests
-   `just new`).
+3. `test`: `cargo nextest` and doc tests, and `scripts/test-policy.sh`.
 4. `deny`: `cargo deny check`. It fetches the RustSec advisory database, so it
    needs network access; on an offline machine this gate fails.
 5. `typos`: spell check.

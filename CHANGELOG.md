@@ -10,7 +10,7 @@ The workspace has one version, shared by every app (see [RELEASING.md](RELEASING
 - Under each version, group entries under the headings `### Added`,
   `### Changed` and `### Fixed`.
 - A change to one app is written with a bold prefix, for example
-  `**hello:** ...`.
+  `**pore:** ...`.
 - A change to a library in `libs/*` is listed under the apps it affects. When
   no app is affected, list it under the prefix `**core:**`.
 

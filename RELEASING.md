@@ -3,13 +3,13 @@
 The release workflow does not exist yet. The release configuration (cargo-dist)
 is deliberately deferred and will be generated when the first distributable app
 exists, because the release tool errors on a workspace with no distributable
-binary. `apps/hello` is a template and is never released (`dist = false`). No
+binary. No
 release has been published. This file describes the intended process and will be
 updated when the workflow is added.
 
 The whole workspace shares one version, set in `Cargo.toml` under
 `[workspace.package]`. The initial version is `0.1.0`. The version is now
-`0.4.0`, to continue pore's `0.3.0`; `hello` and `rsutils-core` (never
+`0.4.0`, to continue pore's `0.3.0`; `rsutils-core` (never
 released) move with it.
 
 ## Process

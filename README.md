@@ -3,8 +3,7 @@
 Small file utilities written in Rust, kept in one Cargo workspace.
 
 - `apps/*`: the command-line tools. Today there is `apps/pore`, a full-text
-  search tool moved here from ckir/pore, and `apps/hello`, a template app that
-  is never released.
+  search tool moved here from ckir/pore.
 - `libs/*`: shared libraries, used inside the workspace and never published.
   Today there are `libs/rsutils-core` and the pore libraries `libs/pore-core`,
   `libs/pore-macros` and `libs/pore-lua` (a Lua module).
@@ -63,7 +62,6 @@ You need the tools listed in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ```
 just check        # run all six gates
-just new <name>   # scaffold a new app from apps/hello
 just install      # install every distributable app
 ```
 
