@@ -11,7 +11,9 @@ publish = false
 
 [dependencies]
 mlua = { workspace = true, features = ["async", "macros", "serialize"] }
-pore-core = { path = "../pore-core" }
+# No default features: pore-core's default pins vendored Lua 5.5, which would clash with
+# the Lua version and the unvendored `module` build chosen here.
+pore-core = { path = "../pore-core", default-features = false }
 tantivy.workspace = true
 
 [lib]
