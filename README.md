@@ -2,14 +2,17 @@
 
 Small file utilities written in Rust, kept in one Cargo workspace.
 
-- `apps/*`: the command-line tools. Today there is only `apps/hello`, a template
-  app that is never released.
+- `apps/*`: the command-line tools. Today there is `apps/pore`, a full-text
+  search tool moved here from ckir/pore, and `apps/hello`, a template app that
+  is never released.
 - `libs/*`: shared libraries, used inside the workspace and never published.
-  Today there is `libs/rsutils-core`.
+  Today there are `libs/rsutils-core` and the pore libraries `libs/pore-core`,
+  `libs/pore-macros` and `libs/pore-lua` (a Lua module).
 
 ## Install
 
-**No releases yet.** Nothing has been published. The plan is to publish prebuilt
+**No releases yet.** Nothing has been published. pore can be installed from source today:
+see [apps/pore/README.md](apps/pore/README.md#install-from-source). The plan is to publish prebuilt
 binaries on [GitHub Releases](https://github.com/ckir/rsutils/releases) for:
 
 - Linux: x86_64 and aarch64 (static musl)

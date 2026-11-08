@@ -1,0 +1,35 @@
+[package]
+name = "pore-lua"
+description = "Lua module exposing pore's search engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+authors = ["Steven Arcangeli", "Costas Kirgoussios"]
+publish = false
+
+[dependencies]
+mlua = { workspace = true, features = ["async", "macros", "serialize"] }
+pore-core = { path = "../pore-core" }
+tantivy.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[features]
+default = ["lua55", "vendored"]
+lua55 = ["mlua/lua55"]
+lua54 = ["mlua/lua54"]
+lua53 = ["mlua/lua53"]
+lua52 = ["mlua/lua52"]
+lua51 = ["mlua/lua51"]
+luajit = ["mlua/luajit"]
+vendored = ["mlua/vendored"]
+module = ["mlua/module"]
+
+[lints]
+workspace = true

@@ -8,7 +8,9 @@ release has been published. This file describes the intended process and will be
 updated when the workflow is added.
 
 The whole workspace shares one version, set in `Cargo.toml` under
-`[workspace.package]`. The initial version is `0.1.0`.
+`[workspace.package]`. The initial version is `0.1.0`. The version is now
+`0.4.0`, to continue pore's `0.3.0`; `hello` and `rsutils-core` (never
+released) move with it.
 
 ## Process
 

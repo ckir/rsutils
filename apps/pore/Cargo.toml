@@ -1,0 +1,36 @@
+[package]
+name = "pore"
+description = "pore — full-text search powered by Tantivy"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+authors = ["Steven Arcangeli", "Costas Kirgoussios"]
+publish = false
+
+[dependencies]
+anyhow = { workspace = true, features = ["backtrace"] }
+chrono = { workspace = true, features = ["serde"] }
+clap.workspace = true
+ignore.workspace = true
+mlua = { workspace = true, features = ["async", "macros", "lua55", "vendored"] }
+serde.workspace = true
+serde_json.workspace = true
+tantivy.workspace = true
+termcolor.workspace = true
+toml.workspace = true
+macros = { package = "pore-macros", path = "../../libs/pore-macros" }
+pore-core = { path = "../../libs/pore-core" }
+
+[dev-dependencies]
+assert_cmd.workspace = true
+predicates.workspace = true
+tempfile.workspace = true
+
+[[bin]]
+name = "pore"
+path = "src/main.rs"
+
+[lints]
+workspace = true

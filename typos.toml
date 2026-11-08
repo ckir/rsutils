@@ -1,2 +1,5 @@
 [files]
 extend-exclude = ["docs/superpowers/**", ".superpowers/**", "target/**"]
+
+[default.extend-words]
+ser = "ser"

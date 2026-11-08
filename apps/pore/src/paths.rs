@@ -1,0 +1,117 @@
+// SPDX-License-Identifier: MIT
+
+//! Base-directory resolution for the config file and the index cache.
+//!
+//! pore follows the XDG layout, but `HOME` — which the XDG fallback depends on — is not
+//! a standard Windows environment variable. Windows sets `USERPROFILE`; `HOME` exists
+//! only if something else put it there, such as Git Bash or WSL. Depending on `HOME`
+//! alone made every command that touches config or cache fail on a stock Windows box
+//! with a bare "environment variable not found".
+
+use anyhow::anyhow;
+use std::ffi::OsString;
+use std::path::PathBuf;
+
+/// Returns the value of `var` if it is set and non-empty.
+///
+/// An empty variable is treated as unset: an exported-but-blank `XDG_CONFIG_HOME` would
+/// otherwise resolve the config path to the process's current directory.
+fn non_empty_var(var: &str, get: &impl Fn(&str) -> Option<OsString>) -> Option<OsString> {
+    get(var).filter(|v| !v.is_empty())
+}
+
+/// Resolves a base directory, preferring `xdg_var` and falling back to `<home>/<suffix>`.
+///
+/// `HOME` is consulted before `USERPROFILE` so that an explicitly set `HOME` keeps
+/// winning. That is what every existing install relies on, including Git Bash and WSL,
+/// where the two point at different places.
+///
+/// # Errors
+///
+/// Returns an error naming every variable it consulted when none of them is set, rather
+/// than propagating `VarError::NotPresent`, which renders as "environment variable not
+/// found" and names neither the variable nor a remedy.
+pub fn resolve_base_dir(xdg_var: &str, suffix: &str) -> Result<PathBuf, anyhow::Error> {
+    resolve_base_dir_with(xdg_var, suffix, |v| std::env::var_os(v))
+}
+
+/// [`resolve_base_dir`] with the environment lookup injected, so tests need not mutate
+/// process-wide state.
+pub(crate) fn resolve_base_dir_with(
+    xdg_var: &str,
+    suffix: &str,
+    get: impl Fn(&str) -> Option<OsString>,
+) -> Result<PathBuf, anyhow::Error> {
+    if let Some(dir) = non_empty_var(xdg_var, &get) {
+        return Ok(PathBuf::from(dir));
+    }
+    for var in ["HOME", "USERPROFILE"] {
+        if let Some(home) = non_empty_var(var, &get) {
+            return Ok(PathBuf::from(home).join(suffix));
+        }
+    }
+    Err(anyhow!(
+        "cannot determine the {suffix} directory: none of {xdg_var}, HOME or USERPROFILE is set. \
+         Set {xdg_var} to choose the location explicitly."
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn resolution_order_and_error() {
+        let mut vars: HashMap<&str, &str> = HashMap::new();
+        let resolve = |vars: &HashMap<&str, &str>| {
+            resolve_base_dir_with("PORE_TEST_XDG", ".config", |v| {
+                vars.get(v).map(OsString::from)
+            })
+        };
+
+        // Nothing set: the error names each variable consulted.
+        let err = resolve(&vars)
+            .expect_err("no variables set must not resolve")
+            .to_string();
+        assert!(err.contains("PORE_TEST_XDG"), "{err}");
+        assert!(err.contains("USERPROFILE"), "{err}");
+
+        // USERPROFILE alone is enough -- this is the Windows case that used to fail.
+        vars.insert("USERPROFILE", "/up");
+        assert_eq!(
+            resolve(&vars).unwrap(),
+            PathBuf::from("/up").join(".config")
+        );
+
+        // HOME wins over USERPROFILE.
+        vars.insert("HOME", "/home");
+        assert_eq!(
+            resolve(&vars).unwrap(),
+            PathBuf::from("/home").join(".config")
+        );
+
+        // The XDG variable wins over both, and is used as-is with no suffix.
+        vars.insert("PORE_TEST_XDG", "/xdg");
+        assert_eq!(resolve(&vars).unwrap(), PathBuf::from("/xdg"));
+
+        // An empty value counts as unset, or the path would resolve to the cwd.
+        vars.insert("PORE_TEST_XDG", "");
+        assert_eq!(
+            resolve(&vars).unwrap(),
+            PathBuf::from("/home").join(".config")
+        );
+
+        // An empty HOME counts as unset too, so USERPROFILE is the fallback.
+        vars.remove("PORE_TEST_XDG");
+        vars.insert("HOME", "");
+        assert_eq!(
+            resolve(&vars).unwrap(),
+            PathBuf::from("/up").join(".config")
+        );
+
+        // With both empty there is nothing left to resolve from.
+        vars.insert("USERPROFILE", "");
+        assert!(resolve(&vars).is_err());
+    }
+}
