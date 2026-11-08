@@ -27,6 +27,7 @@ lint:
 
 test:
     cargo nextest run --workspace --locked
+    cargo nextest run -p pore-core --locked
     cargo test --doc --workspace --locked
     bash scripts/test-new.sh
     bash scripts/test-policy.sh

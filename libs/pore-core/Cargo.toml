@@ -26,6 +26,9 @@ jaq-json = { workspace = true, features = ["serde"] }
 tempfile.workspace = true
 
 [features]
+# On by default so `cargo test -p pore-core` builds on its own: mlua needs exactly one Lua
+# version. Dependents that pick their own Lua (pore-lua) turn defaults off.
+default = ["vendored"]
 vendored = ["mlua/vendored", "mlua/lua55"]
 
 [lints]
