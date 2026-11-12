@@ -29,7 +29,7 @@ jaq-json = "2.0.2"
 termcolor = "1.4.1"
 toml = "1.1.4"
 tempfile = "3.27.0"
-syn = "1"
+syn = "3"
 quote = "1"
 proc-macro2 = "1"
 
